@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">wrapmycars</string>
+    <string name="app_scheme">wrapmycars</string>
 </resources>
