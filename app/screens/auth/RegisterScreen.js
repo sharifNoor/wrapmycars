@@ -1,6 +1,17 @@
 // app/screens/auth/RegisterScreen.js
 import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
 import api from '../../api/api';
 import { AuthContext } from '../../contexts/AuthContext';
 import Button from '../../components/Button';
@@ -10,6 +21,7 @@ export default function RegisterScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useContext(AuthContext);
 
   const handleRegister = async () => {
@@ -27,18 +39,136 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-      <Text style={styles.title}>Create account</Text>
-      <TextInput style={styles.input} placeholder="Full name" value={name} onChangeText={setName} />
-      <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-      <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
-      <Button title={loading ? 'Creating...' : 'Register'} onPress={handleRegister} disabled={loading} />
-    </KeyboardAvoidingView>
+    <LinearGradient
+      colors={['#1B4CFF', '#8B2EFF']}
+      style={styles.background}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Glass Card */}
+          <View style={styles.card}>
+            <Text style={styles.heading}>Create Account</Text>
+            <Text style={styles.sub}>Start your journey with us</Text>
+
+            {/* Input: Full Name */}
+            <View style={styles.inputWrap}>
+              <TextInput
+                style={styles.input}
+                placeholder="Full name"
+                placeholderTextColor="rgba(255,255,255,0.6)"
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+
+            {/* Input: Email */}
+            <View style={styles.inputWrap}>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                placeholderTextColor="rgba(255,255,255,0.6)"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+
+            {/* Input: Password */}
+            <View style={styles.inputWrap}>
+              <TextInput
+                style={styles.input}
+                placeholder="Password"
+                placeholderTextColor="rgba(255,255,255,0.6)"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+              />
+              <Ionicons
+                onPress={() => setShowPassword(!showPassword)}
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={24}
+                color="#fff"
+                style={styles.iconAbsolute} />
+            </View>
+
+            {/* CTA */}
+            <Button
+              title={loading ? 'Creating...' : 'Register'}
+              onPress={handleRegister}
+              disabled={loading}
+              style={{ marginTop: 10 }}
+            />
+
+            {/* Back to Login */}
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={{ marginTop: 18 }}
+            >
+              <Text style={styles.link}>Already have an account? Login</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
-  title: { fontSize: 26, fontWeight: '700', marginBottom: 12 },
-  input: { borderWidth: 1, borderColor: '#ddd', padding: 12, marginBottom: 12, borderRadius: 8 },
+  background: {
+    flex: 1
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  card: {
+    backgroundColor: '#ffffff10',
+    padding: 24,
+    borderRadius: 20,
+  },
+  heading: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  sub: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 26,
+    textAlign: 'center',
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    overflow: 'hidden',
+    alignItems: 'center',
+    marginBottom: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#fff',
+  },
+  iconAbsolute: {
+    marginRight: 12
+  },
+  link: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '500',
+    marginTop: 18,
+  },
 });
