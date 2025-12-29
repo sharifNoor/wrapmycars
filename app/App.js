@@ -7,6 +7,7 @@ import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
 import { Linking } from 'react-native';
 import api from './api/api';
+import { StripeProvider } from '@stripe/stripe-react-native';
 
 
 function RootNavigator() {
@@ -55,10 +56,15 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
-    </AuthProvider>
+    <StripeProvider
+      publishableKey="pk_test_51SjVkcCVl0h0gHG13XKOAXmS3a1B8g5XNjAQYCLghaZDU5WybArYjSrOk4LZy7pQFcDW3nkJQtiDqCFcsrifqIdA00sT8emK69"
+      merchantIdentifier="merchant.com.wrapmycars" // required for Apple Pay
+    >
+      <AuthProvider>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </AuthProvider>
+    </StripeProvider>
   );
 }

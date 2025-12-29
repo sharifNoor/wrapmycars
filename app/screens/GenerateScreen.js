@@ -1,8 +1,11 @@
 // app/screens/GenerateScreen.js
 import React, { useState, useContext, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, SafeAreaView, Share, Platform, PermissionsAndroid } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
+import RNShare from 'react-native-share';
+import RNFS from 'react-native-fs';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import api, { API_BASE_URL } from '../api/api';
 import { v4 as uuidv4 } from 'uuid';
 import Button from '../components/Button';
@@ -228,6 +231,121 @@ export default function GenerateScreen() {
     }
   };
 
+  const requestStoragePermission = async () => {
+    return true;
+
+    if (Platform.OS !== 'android') return true;
+
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+        {
+          title: 'Storage Permission',
+          message: 'App needs access to save images',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        }
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch (err) {
+      console.warn(err);
+      return false;
+    }
+  };
+
+  const getAbsoluteImageUrl = (uri) => {
+    if (!uri) return null;
+
+    // Already absolute
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      return uri;
+    }
+
+    // Relative → make absolute
+    return `${API_BASE_URL}${uri}`;
+  };
+
+
+  const handleDownload = async () => {
+    if (currentIndex < 0) return;
+
+    try {
+      let imageUrl = history[currentIndex];
+
+      // Ensure absolute URL
+      if (imageUrl.startsWith('/')) {
+        imageUrl = `${API_BASE_URL}${imageUrl}`;
+      }
+      debugger
+      const filename = `wrapmycars_${Date.now()}.jpg`;
+      const localPath = `${RNFS.CachesDirectoryPath}/${filename}`;
+
+      // 1️⃣ Download image to local cache
+      const download = await RNFS.downloadFile({
+        fromUrl: imageUrl,
+        toFile: localPath,
+      }).promise;
+
+      if (download.statusCode !== 200) {
+        throw new Error('Image download failed');
+      }
+
+      // 2️⃣ Save LOCAL file to gallery
+      await CameraRoll.save(`file://${localPath}`, {
+        type: 'photo',
+      });
+
+      Alert.alert('Success', 'Image saved to gallery!');
+    } catch (error) {
+      console.error('Download error:', error);
+      Alert.alert('Error', 'Failed to save image');
+    }
+  };
+
+
+
+
+  const handleShare = async () => {
+    if (currentIndex < 0) return;
+
+    const imageUri = getAbsoluteImageUrl(history[currentIndex]);
+
+    try {
+      let shareUri = imageUri;
+
+      // If it's a remote URL, download it first
+      if (imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
+        const filename = `car_wrap_${Date.now()}.jpg`;
+        const downloadDest = `${RNFS.CachesDirectoryPath}/${filename}`;
+
+        // Download the image
+        const download = await RNFS.downloadFile({
+          fromUrl: imageUri,
+          toFile: downloadDest,
+        }).promise;
+
+        if (download.statusCode === 200) {
+          shareUri = `file://${downloadDest}`;
+        } else {
+          throw new Error('Download failed');
+        }
+      }
+
+      await RNShare.open({
+        url: shareUri,
+        title: 'Share Car Wrap',
+        message: 'Check out my AI-generated car wrap! Created with WrapMyCars',
+        type: 'image/jpeg',
+      });
+    } catch (error) {
+      if (error.message !== 'User did not share') {
+        console.error('Share error:', error);
+        Alert.alert('Error', 'Failed to share image');
+      }
+    }
+  };
+
   // --- RENDER HELPERS ---
 
   // 1. Mod Grid
@@ -400,11 +518,11 @@ export default function GenerateScreen() {
                 <Text style={styles.promptText}>Start by uploading a photo of your car</Text>
                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 20 }}>
                   <TouchableOpacity style={styles.bigBtn} onPress={pickImage}>
-                    <Ionicons name="images-outline" size={40} color="#0b63ff" />
+                    <Ionicons name="images-outline" size={40} color="#fff" />
                     <Text style={styles.btnTxt}>Gallery</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.bigBtn} onPress={takePhoto}>
-                    <Ionicons name="camera-outline" size={40} color="#0b63ff" />
+                    <Ionicons name="camera-outline" size={40} color="#fff" />
                     <Text style={styles.btnTxt}>Camera</Text>
                   </TouchableOpacity>
                 </View>
@@ -412,8 +530,18 @@ export default function GenerateScreen() {
             ) : (
               <View style={{ flex: 1 }}>
                 {!selectedModType && (
-                  <View style={{ height: 200 }}>
+                  <View style={{ height: 200, position: 'relative' }}>
                     <ImagePreview uri={history[currentIndex]} />
+
+                    {/* Action Buttons Overlay */}
+                    <View style={styles.imageActions}>
+                      <TouchableOpacity style={styles.actionBtn} onPress={handleDownload}>
+                        <Ionicons name="download-outline" size={24} color="#fff" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
+                        <Ionicons name="share-social-outline" size={24} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
 
@@ -487,6 +615,26 @@ const styles = StyleSheet.create({
   },
   optionSelected: { borderColor: '#0b63ff', backgroundColor: 'rgba(255,255,255,0.2)' },
   optionText: { color: '#fff', marginTop: 8, textAlign: 'center' },
+
+  // Image Actions
+  imageActions: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    flexDirection: 'row',
+    gap: 8,
+    zIndex: 10,
+  },
+  actionBtn: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
 
   centerMsg: { padding: 40, alignItems: 'center' },
 });

@@ -1,28 +1,95 @@
 // app/screens/BillingScreen.js
 import React, { useState, useContext } from 'react';
-import { View, Text, Linking, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthContext } from '../contexts/AuthContext';
 import api from '../api/api';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { useStripe } from '@stripe/stripe-react-native';
 
 export default function BillingScreen({ navigation }) {
-  const { credits } = useContext(AuthContext);
+  const { credits, updateCredits } = useContext(AuthContext);
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [loading, setLoading] = useState(false);
 
-  const createCheckout = async () => {
+
+  const buyCredits = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/billing/create-checkout-credits', {
-        priceId: 'price_1SaRMJBHWdCdknXALntSQrnZ',
-        successUrl: "http://localhost:3000/success",
-        cancelUrl: "http://localhost:3000/cancel"
+      // 1. Fetch Payment Intent & Ephemeral Key from Backend
+      console.log('Requesting payment sheet setup...');
+      const res = await api.post('/billing/mobile-checkout', {
+        // priceId: 'price_1SjVqBE0yTvNMAdBdajdKzo1'  // Live
+        priceId: 'price_1SjWSBCVl0h0gHG1cgoxOkQd'  // Test
       });
-      const { url } = res.data;
-      await Linking.openURL(url);
+
+      console.log('Backend response:', res.data);
+      const { paymentIntent, ephemeralKey, customer, publishableKey } = res.data;
+
+      // 2. Initialize Payment Sheet
+      const { error: initError } = await initPaymentSheet({
+        merchantDisplayName: 'WrapMyCars',
+        customerId: customer,
+        customerEphemeralKeySecret: ephemeralKey,
+        paymentIntentClientSecret: paymentIntent,
+        // Apple Pay / Google Pay defaults enabled
+        userInterfaceStyle: 'dark',
+        appearance: {
+          colors: {
+            primary: '#0b63ff',
+            background: '#1c1c1c',
+            componentBackground: '#2c2c2c',
+            componentBorder: '#444444',
+            componentDivider: '#555555',
+            primaryText: '#ffffff',
+            secondaryText: '#cccccc',
+            componentText: '#ffffff',
+            placeholderText: '#888888',
+          },
+        },
+      });
+
+      if (initError) {
+        console.log(initError);
+        Alert.alert('Error', initError.message);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Present Payment Sheet
+      const { error: paymentError } = await presentPaymentSheet();
+
+      if (paymentError) {
+        if (paymentError.code !== 'Canceled') {
+          Alert.alert('Error', paymentError.message);
+        }
+      } else {
+        // Success - Stripe automatically saves the payment method to the customer
+        Alert.alert('Success', 'Credits purchased successfully!');
+        await updateCredits();
+      }
+
     } catch (err) {
-      console.warn(err.response?.data || err.message);
-      Alert.alert('Error', 'Failed to open checkout');
+      console.error('Payment Error Details:', {
+        message: err.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+        config: {
+          url: err?.config?.url,
+          method: err?.config?.method,
+          headers: err?.config?.headers
+        }
+      });
+
+      const errorMessage = err?.response?.data?.message
+        || err?.response?.data?.error
+        || err.message
+        || 'Payment initialization failed';
+
+      Alert.alert(
+        'Payment Error',
+        `Status: ${err?.response?.status || 'Unknown'}\n${errorMessage}`
+      );
     } finally {
       setLoading(false);
     }
@@ -48,17 +115,18 @@ export default function BillingScreen({ navigation }) {
             <Text style={styles.balanceLabel}>Your Balance</Text>
             <View style={styles.balanceRow}>
               <Ionicons name="flash" size={32} color="#FFD700" />
-              <Text style={styles.balanceValue}>{credits}</Text>
+              <Text style={styles.balanceValue}>{credits ?? 0}</Text>
             </View>
             <Text style={styles.balanceSub}>Credits available for generation</Text>
           </View>
+
 
           <Text style={styles.sectionTitle}>Available Packages</Text>
 
           {/* Package Card */}
           <TouchableOpacity
             style={styles.packageCard}
-            onPress={createCheckout}
+            onPress={buyCredits}
             disabled={loading}
           >
             <View style={styles.badge}>
@@ -76,14 +144,14 @@ export default function BillingScreen({ navigation }) {
             </View>
 
             {loading && (
-              <Text style={styles.loadingText}>Opening Checkout...</Text>
+              <Text style={styles.loadingText}>Initializing Payment...</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.infoSection}>
             <Ionicons name="shield-checkmark-outline" size={20} color="rgba(255,255,255,0.5)" />
             <Text style={styles.infoText}>
-              Secure payment processed by Stripe. Credits are added immediately after purchase.
+              Secure payment processed by Stripe. Supports Apple Pay, Google Pay, and Cards.
             </Text>
           </View>
 

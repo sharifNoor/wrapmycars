@@ -15,7 +15,7 @@ const MOCK_FEED = [
     id: '1',
     title: 'G Wagon',
     subtitle: 'Glossy red paint',
-    original: 'https://images.unsplash.com/photo-1552519507-da63767e9975?q=80&w=2670&auto=format&fit=crop',
+    original: 'https://images.unsplash.com/photo-1714434087684-a2f4816ca832?q=80&w=1974&auto=format&fit=crop',
     generated: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=2574&auto=format&fit=crop',
   },
   {
@@ -29,8 +29,8 @@ const MOCK_FEED = [
     id: '3',
     title: 'Porsche 911',
     subtitle: 'Cyberpunk neon style',
-    original: 'https://images.unsplash.com/photo-1503376763036-066120622c74?q=80&w=2670&auto=format&fit=crop',
-    generated: 'https://images.unsplash.com/photo-1669915998188-466d6d45db62?q=80&w=2670&auto=format&fit=crop',
+    original: 'https://images.unsplash.com/photo-1593353798398-6024b7444bb6?q=80&w=1964&auto=format&fit=crop',
+    generated: 'https://images.unsplash.com/photo-1580274455191-1c62238fa333?q=80&w=1964&auto=format&fit=crop',
   },
 ];
 
