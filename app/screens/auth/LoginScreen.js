@@ -117,9 +117,11 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#ffffff10',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     padding: 24,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   heading: {
     fontSize: 32,
@@ -141,6 +143,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   input: {
     flex: 1,

@@ -1,6 +1,7 @@
 // app/screens/GenerateScreen.js
 import React, { useState, useContext, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, SafeAreaView } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import api, { API_BASE_URL } from '../api/api';
 import { v4 as uuidv4 } from 'uuid';
@@ -257,7 +258,7 @@ export default function GenerateScreen() {
                 key={mod.id}
                 style={[
                   styles.modCard,
-                  isApplied && { borderColor: '#0b63ff', borderWidth: 2 } // Highlight active mods
+                  isApplied && { borderColor: '#0b63ff', borderWidth: 2, backgroundColor: 'rgba(255,255,255,0.15)' } // Highlight active mods
                 ]}
                 onPress={() => handleModSelect(mod)}
               >
@@ -373,85 +374,91 @@ export default function GenerateScreen() {
 
   // --- MAIN RENDER ---
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          {/* Only show "Back" if we are viewing an image, but NOT deep in customization (that has its own back) 
-                  Actually, if selectedModType is set, we hide this header or change behavior?
-                  Let's keep this header for "Overall App Nav / Credits".
-              */}
-          {currentIndex >= 0 && !selectedModType && (
-            <TouchableOpacity onPress={handleUndo} style={{ padding: 8 }}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-          )}
-          {/* Spacer if no back button */}
-          {currentIndex < 0 || selectedModType ? <View style={{ width: 40 }} /> : null}
+    <LinearGradient colors={['#1B4CFF', '#8B2EFF']} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          {/* Header */}
+          <View style={styles.header}>
+            {/* Back Button */}
+            {currentIndex >= 0 && !selectedModType && (
+              <TouchableOpacity onPress={handleUndo} style={styles.backBtn}>
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {/* Spacer */}
+            {currentIndex < 0 || selectedModType ? <View style={{ width: 40 }} /> : null}
 
-          <Text style={styles.title}>AI Generator</Text>
-          <CreditBadge credits={credits} />
-        </View>
+            <Text style={styles.title}>AI Generator</Text>
+            <CreditBadge credits={credits} />
+          </View>
 
-        {/* Main Content Area */}
-        <View style={{ flex: 1 }}>
-          {currentIndex < 0 ? (
-            // Step 0: Pick Image
-            <View style={styles.centerContainer}>
-              <Text style={styles.promptText}>Start by uploading a photo of your car</Text>
-              <View style={{ flexDirection: 'row', gap: 16, marginTop: 20 }}>
-                <TouchableOpacity style={styles.bigBtn} onPress={pickImage}>
-                  <Ionicons name="images-outline" size={40} color="#0b63ff" />
-                  <Text style={styles.btnTxt}>Gallery</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.bigBtn} onPress={takePhoto}>
-                  <Ionicons name="camera-outline" size={40} color="#0b63ff" />
-                  <Text style={styles.btnTxt}>Camera</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View style={{ flex: 1 }}>
-              {!selectedModType && (
-                <View style={{ height: 200 }}>
-                  <ImagePreview uri={history[currentIndex]} />
+          {/* Main Content Area */}
+          <View style={{ flex: 1 }}>
+            {currentIndex < 0 ? (
+              // Step 0: Pick Image
+              <View style={styles.centerContainer}>
+                <Text style={styles.promptText}>Start by uploading a photo of your car</Text>
+                <View style={{ flexDirection: 'row', gap: 16, marginTop: 20 }}>
+                  <TouchableOpacity style={styles.bigBtn} onPress={pickImage}>
+                    <Ionicons name="images-outline" size={40} color="#0b63ff" />
+                    <Text style={styles.btnTxt}>Gallery</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.bigBtn} onPress={takePhoto}>
+                    <Ionicons name="camera-outline" size={40} color="#0b63ff" />
+                    <Text style={styles.btnTxt}>Camera</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-
-              <View style={styles.controlsArea}>
-                {!selectedModType ? renderModGrid() : renderCustomization()}
               </View>
-            </View>
-          )}
+            ) : (
+              <View style={{ flex: 1 }}>
+                {!selectedModType && (
+                  <View style={{ height: 200 }}>
+                    <ImagePreview uri={history[currentIndex]} />
+                  </View>
+                )}
+
+                <View style={styles.controlsArea}>
+                  {!selectedModType ? renderModGrid() : renderCustomization()}
+                </View>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#121212' },
+  safeArea: { flex: 1 },
   container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
   title: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  backBtn: { padding: 8 },
 
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  promptText: { color: '#ccc', fontSize: 16 },
+  promptText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },
   bigBtn: {
-    width: 120, height: 120, backgroundColor: '#1e1e1e', borderRadius: 12,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#333'
+    width: 120, height: 120,
+    backgroundColor: 'rgba(255,255,255,0.1)', // Glass
+    borderRadius: 20,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
   },
   btnTxt: { color: '#fff', marginTop: 12, fontWeight: '600' },
 
   // Mods Grid
-  gridContainer: { flex: 1, padding: 16, paddingTop: 64 }, // Added top padding
+  gridContainer: { flex: 1, padding: 16, paddingTop: 64 },
   stepTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   modCard: {
-    width: '48%', backgroundColor: '#1e1e1e', padding: 16, borderRadius: 12,
-    minHeight: 100, justifyContent: 'center', alignItems: 'center'
+    width: '48%',
+    backgroundColor: 'rgba(255,255,255,0.1)', // Glass
+    padding: 16, borderRadius: 16,
+    minHeight: 100, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
   },
-  modLabel: { color: '#fff', fontSize: 16, fontWeight: '600', marginTop: 8 },
+  modLabel: { color: '#fff', fontSize: 14, fontWeight: '600', marginTop: 8 },
 
   // Chips
   chip: {
@@ -465,19 +472,21 @@ const styles = StyleSheet.create({
   },
 
   // Customization
-  controlsArea: { flex: 1, marginTop: 10 }, // Added margin top to separate from image
+  controlsArea: { flex: 1, marginTop: 10 },
   section: { marginBottom: 24 },
-  sectionTitle: { color: '#ddd', fontSize: 16, marginBottom: 12 },
+  sectionTitle: { color: 'rgba(255,255,255,0.8)', fontSize: 16, marginBottom: 12 },
 
   colorGrid: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   colorCircle: { width: 48, height: 48, borderRadius: 24 },
 
   optionCard: {
-    backgroundColor: '#1e1e1e', padding: 12, borderRadius: 8, marginRight: 12,
-    minWidth: 100, alignItems: 'center', borderWidth: 1, borderColor: 'transparent'
+    backgroundColor: 'rgba(255,255,255,0.1)', // Glass
+    padding: 12, borderRadius: 16, marginRight: 12,
+    minWidth: 100, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
   },
-  optionSelected: { borderColor: '#0b63ff', backgroundColor: '#2a2a2a' },
-  optionText: { color: '#fff', marginTop: 4 },
+  optionSelected: { borderColor: '#0b63ff', backgroundColor: 'rgba(255,255,255,0.2)' },
+  optionText: { color: '#fff', marginTop: 8, textAlign: 'center' },
 
   centerMsg: { padding: 40, alignItems: 'center' },
 });
