@@ -11,12 +11,16 @@ const Stack = createNativeStackNavigator();
 
 export default function AppStack() {
   return (
-    <Stack.Navigator initialRouteName="Home">
+    <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Generate" component={GenerateScreen} />
       <Stack.Screen name="Credits" component={CreditsScreen} />
       <Stack.Screen name="Billing" component={BillingScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Privacy" component={require('../screens/PrivacyScreen').default} />
+      <Stack.Screen name="About" component={require('../screens/AboutScreen').default} />
+      <Stack.Screen name="Contact" component={require('../screens/ContactScreen').default} />
+      <Stack.Screen name="UpdatePassword" component={require('../screens/UpdatePasswordScreen').default} />
     </Stack.Navigator>
   );
 }

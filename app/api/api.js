@@ -6,7 +6,7 @@ import { getToken } from '../utils/storage';
 // During development, set to LAN IP like http://192.168.1.100:3000
 // For Android emulator use http://10.0.2.2:3000
 
-const API_BASE_URL = __DEV__ ? 'http://192.168.1.8:4000/api' : 'https://api.yourdomain.com'; // <-- replace
+export const API_BASE_URL = __DEV__ ? 'http://192.168.1.11:4000/api' : 'https://api.yourdomain.com'; // <-- replace
 
 const instance = axios.create({
   baseURL: API_BASE_URL,

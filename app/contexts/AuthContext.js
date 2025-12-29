@@ -41,8 +41,8 @@ export const AuthProvider = ({ children }) => {
         if (savedToken) {
           setToken(savedToken);
           // Optionally fetch user profile
-          // const profile = await api.get('/auth/me');
-          // setUser(profile.data.user);
+          const profile = await api.get('/auth/me');
+          setUser(profile.data.user);
           await fetchCredits(); // fetch credits immediately
         }
       } catch (e) {
