@@ -11,6 +11,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
 
+import { theme } from '../constants/theme';
+
 const { width } = Dimensions.get('window');
 
 export default function Loader() {
@@ -38,7 +40,7 @@ export default function Loader() {
       {/* Spinning Gradient Ring */}
       <Animated.View style={[styles.ringContainer, spinStyle]}>
         <LinearGradient
-          colors={['#1B4CFF', '#8B2EFF']}
+          colors={theme.gradients.sunset}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.ring}

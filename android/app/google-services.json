@@ -1,0 +1,47 @@
+{
+    "project_info": {
+        "project_number": "509902062436",
+        "project_id": "wrapmycars-eaf35",
+        "storage_bucket": "wrapmycars-eaf35.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:509902062436:android:095ea239e17f5980a1f071",
+                "android_client_info": {
+                    "package_name": "com.wrapmycars"
+                }
+            },
+            "oauth_client": [
+                {
+                    "client_id": "509902062436-8o7qshe63tblhhstt6enkjvvh9eudc6l.apps.googleusercontent.com",
+                    "client_type": 1,
+                    "android_info": {
+                        "package_name": "com.wrapmycars",
+                        "certificate_hash": "a8f8248ebd7720903c7b92a4de6e28db024f0a57"
+                    }
+                },
+                {
+                    "client_id": "509902062436-m4etenp2g3llb1f3dceekcaoek6sq7l6.apps.googleusercontent.com",
+                    "client_type": 3
+                }
+            ],
+            "api_key": [
+                {
+                    "current_key": "AIzaSyDsMebAcy6r-2rbY0_Qk8Wt2mNXeRc6KT0"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": [
+                        {
+                            "client_id": "509902062436-m4etenp2g3llb1f3dceekcaoek6sq7l6.apps.googleusercontent.com",
+                            "client_type": 3
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

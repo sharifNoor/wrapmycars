@@ -1,6 +1,7 @@
 // app/screens/GenerateScreen.js
 import React, { useState, useContext, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, SafeAreaView, Share, Platform, PermissionsAndroid } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, Share, Platform, PermissionsAndroid } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import RNShare from 'react-native-share';
@@ -12,11 +13,14 @@ import Button from '../components/Button';
 import ImagePreview from '../components/ImagePreview';
 import CreditBadge from '../components/CreditBadge';
 import { AuthContext } from '../contexts/AuthContext';
+import { useAlert } from '../contexts/AlertContext';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { MODIFICATION_TYPES, COLORS, FINISHES, WHEEL_STYLES, BODYKIT_STYLES, TINT_LEVELS } from '../data/dummyData';
+import { theme } from '../constants/theme';
 
 export default function GenerateScreen() {
   const { credits, updateCredits } = useContext(AuthContext);
+  const { showAlert } = useAlert();
 
   // --- STATE ---
   const [history, setHistory] = useState([]);
@@ -49,7 +53,7 @@ export default function GenerateScreen() {
 
   const pickImage = async () => {
     const res = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
-    if (res.errorCode) return Alert.alert('Error', res.errorMessage);
+    if (res.errorCode) return showAlert({ type: 'error', title: 'Error', message: res.errorMessage });
     if (!res.assets) return;
     setHistory([res.assets[0].uri]);
     setCurrentIndex(0);
@@ -58,7 +62,7 @@ export default function GenerateScreen() {
 
   const takePhoto = async () => {
     const res = await launchCamera({ mediaType: 'photo', quality: 0.8 });
-    if (res.errorCode) return Alert.alert('Error', res.errorMessage);
+    if (res.errorCode) return showAlert({ type: 'error', title: 'Error', message: res.errorMessage });
     if (!res.assets) return;
     setHistory([res.assets[0].uri]);
     setCurrentIndex(0);
@@ -147,8 +151,8 @@ export default function GenerateScreen() {
   };
 
   const handleGenerate = async () => {
-    if (currentIndex < 0) return Alert.alert('Error', 'Please choose an image');
-    if (pendingModifications.length === 0) return Alert.alert('Error', 'Please select at least one modification');
+    if (currentIndex < 0) return showAlert({ type: 'error', title: 'Error', message: 'Please choose an image' });
+    if (pendingModifications.length === 0) return showAlert({ type: 'error', title: 'Error', message: 'Please select at least one modification' });
 
     // Construct Prompt
     const finalPrompt = constructPrompt();
@@ -194,7 +198,7 @@ export default function GenerateScreen() {
 
     } catch (err) {
       console.warn(err);
-      Alert.alert('Error', 'Generation failed');
+      showAlert({ type: 'error', title: 'Error', message: 'Generation failed' });
     } finally {
       setLoading(false);
     }
@@ -296,10 +300,10 @@ export default function GenerateScreen() {
         type: 'photo',
       });
 
-      Alert.alert('Success', 'Image saved to gallery!');
+      showAlert({ type: 'success', title: 'Success', message: 'Image saved to gallery!' });
     } catch (error) {
       console.error('Download error:', error);
-      Alert.alert('Error', 'Failed to save image');
+      showAlert({ type: 'error', title: 'Error', message: 'Failed to save image' });
     }
   };
 
@@ -341,7 +345,7 @@ export default function GenerateScreen() {
     } catch (error) {
       if (error.message !== 'User did not share') {
         console.error('Share error:', error);
-        Alert.alert('Error', 'Failed to share image');
+        showAlert({ type: 'error', title: 'Error', message: 'Failed to share image' });
       }
     }
   };
@@ -492,7 +496,7 @@ export default function GenerateScreen() {
 
   // --- MAIN RENDER ---
   return (
-    <LinearGradient colors={['#1B4CFF', '#8B2EFF']} style={{ flex: 1 }}>
+    <LinearGradient colors={theme.gradients.midnight} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           {/* Header */}
@@ -561,36 +565,36 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  title: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  title: { fontSize: 20, fontWeight: '700', color: theme.colors.text },
   backBtn: { padding: 8 },
 
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  promptText: { color: 'rgba(255,255,255,0.8)', fontSize: 16 },
+  promptText: { color: theme.colors.textDim, fontSize: 16 },
   bigBtn: {
     width: 120, height: 120,
-    backgroundColor: 'rgba(255,255,255,0.1)', // Glass
+    backgroundColor: theme.colors.cardBackground, // Glass
     borderRadius: 20,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+    borderWidth: 1, borderColor: theme.colors.border
   },
-  btnTxt: { color: '#fff', marginTop: 12, fontWeight: '600' },
+  btnTxt: { color: theme.colors.text, marginTop: 12, fontWeight: '600' },
 
   // Mods Grid
   gridContainer: { flex: 1, padding: 16, paddingTop: 64 },
-  stepTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginBottom: 16 },
+  stepTitle: { fontSize: 22, fontWeight: 'bold', color: theme.colors.text, marginBottom: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   modCard: {
     width: '48%',
-    backgroundColor: 'rgba(255,255,255,0.1)', // Glass
+    backgroundColor: theme.colors.cardBackground, // Glass
     padding: 16, borderRadius: 16,
     minHeight: 100, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+    borderWidth: 1, borderColor: theme.colors.border
   },
-  modLabel: { color: '#fff', fontSize: 14, fontWeight: '600', marginTop: 8 },
+  modLabel: { color: theme.colors.text, fontSize: 14, fontWeight: '600', marginTop: 8 },
 
   // Chips
   chip: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#0b63ff',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.primary,
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16
   },
   chipText: { color: '#fff', marginRight: 4, fontWeight: '600' },
@@ -602,19 +606,19 @@ const styles = StyleSheet.create({
   // Customization
   controlsArea: { flex: 1, marginTop: 10 },
   section: { marginBottom: 24 },
-  sectionTitle: { color: 'rgba(255,255,255,0.8)', fontSize: 16, marginBottom: 12 },
+  sectionTitle: { color: theme.colors.textDim, fontSize: 16, marginBottom: 12 },
 
   colorGrid: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   colorCircle: { width: 48, height: 48, borderRadius: 24 },
 
   optionCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)', // Glass
+    backgroundColor: theme.colors.cardBackground, // Glass
     padding: 12, borderRadius: 16, marginRight: 12,
     minWidth: 100, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
+    borderWidth: 1, borderColor: theme.colors.border
   },
-  optionSelected: { borderColor: '#0b63ff', backgroundColor: 'rgba(255,255,255,0.2)' },
-  optionText: { color: '#fff', marginTop: 8, textAlign: 'center' },
+  optionSelected: { borderColor: theme.colors.primary, backgroundColor: 'rgba(255,255,255,0.2)' },
+  optionText: { color: theme.colors.text, marginTop: 8, textAlign: 'center' },
 
   // Image Actions
   imageActions: {

@@ -1,15 +1,20 @@
 // app/screens/SettingsScreen.js
 import React, { useContext, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthContext } from '../contexts/AuthContext';
+import { useAlert } from '../contexts/AlertContext';
 import api from '../api/api';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+
+import { theme } from '../constants/theme';
 
 export default function SettingsScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [loading, setLoading] = useState(false);
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     // Optionally load user preferences from backend
@@ -32,31 +37,43 @@ export default function SettingsScreen({ navigation }) {
       await api.post('/user/preferences', { emailNotifications: val });
     } catch (err) {
       console.warn('update prefs failed', err?.response?.data || err?.message);
-      Alert.alert('Error', 'Unable to update preferences');
+      showAlert({
+        type: 'error',
+        title: 'Error',
+        message: 'Unable to update preferences',
+      });
       setEmailNotifications((prev) => !prev);
     }
   };
 
   const handleDeleteAccount = async () => {
-    Alert.alert('Delete account', 'Are you sure? This action is irreversible.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          setLoading(true);
-          try {
-            await api.delete('/auth/delete');
-            await logout();
-          } catch (err) {
-            console.warn('delete account failed', err?.response?.data || err?.message);
-            Alert.alert('Error', 'Account deletion failed');
-          } finally {
-            setLoading(false);
-          }
+    showAlert({
+      type: 'confirm',
+      title: 'Delete account',
+      message: 'Are you sure? This action is irreversible.',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await api.delete('/auth/account');
+              await logout();
+            } catch (err) {
+              console.warn('delete account failed', err?.response?.data || err?.message);
+              showAlert({
+                type: 'error',
+                title: 'Error',
+                message: 'Account deletion failed',
+              });
+            } finally {
+              setLoading(false);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    });
   };
 
   const RenderSection = ({ title, children }) => (
@@ -89,7 +106,7 @@ export default function SettingsScreen({ navigation }) {
   );
 
   return (
-    <LinearGradient colors={['#1B4CFF', '#8B2EFF']} style={styles.background}>
+    <LinearGradient colors={theme.gradients.midnight} style={styles.background}>
       <SafeAreaView style={styles.safeArea}>
         {/* Header */}
         <View style={styles.header}>
@@ -201,25 +218,25 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12
+    paddingHorizontal: 16, paddingVertical: 12, paddingTop: Platform.OS === 'android' ? 40 : 12
   },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  headerTitle: { fontSize: 20, fontWeight: '700', color: theme.colors.text },
   backBtn: { padding: 8 },
 
   scrollContent: { padding: 16 },
 
   sectionContainer: { marginBottom: 24 },
   sectionHeader: {
-    fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.6)',
+    fontSize: 14, fontWeight: '600', color: theme.colors.textDim,
     marginBottom: 8, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 1
   },
 
   card: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: theme.colors.cardBackground,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: theme.colors.border,
   },
 
   row: {
@@ -228,24 +245,24 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    borderBottomColor: theme.colors.border,
   },
   rowLeft: { flexDirection: 'row', alignItems: 'center' },
   iconContainer: {
     width: 32, height: 32, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center', alignItems: 'center', marginRight: 12
   },
-  rowLabel: { fontSize: 16, color: '#fff', fontWeight: '500' },
+  rowLabel: { fontSize: 16, color: theme.colors.text, fontWeight: '500' },
 
   rowRight: { flexDirection: 'row', alignItems: 'center' },
-  rowValue: { color: 'rgba(255,255,255,0.6)', fontSize: 14, marginRight: 8 },
+  rowValue: { color: theme.colors.textDim, fontSize: 14, marginRight: 8 },
 
   deleteButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     padding: 16, backgroundColor: 'rgba(255, 71, 71, 0.1)',
     borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255, 71, 71, 0.3)'
   },
-  deleteText: { color: '#ff4747', fontWeight: '700', fontSize: 16 },
+  deleteText: { color: theme.colors.error, fontWeight: '700', fontSize: 16 },
 
-  version: { textAlign: 'center', color: 'rgba(255,255,255,0.3)', marginTop: 20 },
+  version: { textAlign: 'center', color: theme.colors.textDim, marginTop: 20 },
 });

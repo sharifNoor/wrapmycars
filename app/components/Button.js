@@ -1,6 +1,5 @@
-// app/components/Button.js
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { theme } from '../constants/theme';
 import LinearGradient from 'react-native-linear-gradient';
 
 export default function Button({
@@ -10,7 +9,7 @@ export default function Button({
   loading,
   style,
   textStyle,
-  gradientColors = ['#1B4CFF', '#8B2EFF'], // your brand gradient
+  gradientColors = theme.gradients.sunset, // New default
 }) {
   return (
     <TouchableOpacity
@@ -34,7 +33,6 @@ export default function Button({
     </TouchableOpacity>
   );
 }
-
 const styles = StyleSheet.create({
   btn: {
     paddingVertical: 14,

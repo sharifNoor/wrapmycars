@@ -1,8 +1,11 @@
 // app/screens/ContactScreen.js
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+
+import { theme } from '../constants/theme';
 
 export default function ContactScreen({ navigation }) {
 
@@ -11,7 +14,7 @@ export default function ContactScreen({ navigation }) {
     };
 
     return (
-        <LinearGradient colors={['#1B4CFF', '#8B2EFF']} style={styles.background}>
+        <LinearGradient colors={theme.gradients.midnight} style={styles.background}>
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -32,7 +35,7 @@ export default function ContactScreen({ navigation }) {
                             <Text style={styles.cardTitle}>Email Support</Text>
                             <Text style={styles.cardSub}>support@wrapmycars.com</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.5)" />
+                        <Ionicons name="chevron-forward" size={24} color={theme.colors.textDim} />
                     </TouchableOpacity>
 
                     <View style={styles.socialSection}>
@@ -52,22 +55,26 @@ export default function ContactScreen({ navigation }) {
 const styles = StyleSheet.create({
     background: { flex: 1 },
     safeArea: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-    headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+    header: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        padding: 16, paddingTop: Platform.OS === 'android' ? 40 : 16
+    },
+    headerTitle: { fontSize: 20, fontWeight: '700', color: theme.colors.text },
     backBtn: { padding: 8 },
     content: { padding: 20 },
-    intro: { color: 'rgba(255,255,255,0.8)', fontSize: 16, marginBottom: 32 },
+    intro: { color: theme.colors.textDim, fontSize: 16, marginBottom: 32 },
 
     card: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)',
-        padding: 20, borderRadius: 16, marginBottom: 16
+        flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.cardBackground,
+        padding: 20, borderRadius: 16, marginBottom: 16,
+        borderWidth: 1, borderColor: theme.colors.border
     },
     cardText: { flex: 1, marginLeft: 16 },
-    cardTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
-    cardSub: { color: 'rgba(255,255,255,0.6)', marginTop: 4 },
+    cardTitle: { color: theme.colors.text, fontSize: 18, fontWeight: '600' },
+    cardSub: { color: theme.colors.textDim, marginTop: 4 },
 
     socialSection: { marginTop: 32, alignItems: 'center' },
-    socialTitle: { color: 'rgba(255,255,255,0.6)', fontSize: 14, textTransform: 'uppercase', marginBottom: 16 },
+    socialTitle: { color: theme.colors.textDim, fontSize: 14, textTransform: 'uppercase', marginBottom: 16 },
     socialRow: { flexDirection: 'row' },
     socialIcon: { marginHorizontal: 16 },
 });

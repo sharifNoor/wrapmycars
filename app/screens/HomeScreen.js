@@ -1,52 +1,57 @@
-// app/screens/HomeScreen.js
 import React, { useContext, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, StatusBar } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthContext } from '../contexts/AuthContext';
 import CreditBadge from '../components/CreditBadge';
 import TransformationCard from '../components/TransformationCard';
-
-// Mock Data for "Inspiration"
-const MOCK_FEED = [
-  {
-    id: '1',
-    title: 'G Wagon',
-    subtitle: 'Glossy red paint',
-    original: 'https://images.unsplash.com/photo-1714434087684-a2f4816ca832?q=80&w=1974&auto=format&fit=crop',
-    generated: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?q=80&w=2574&auto=format&fit=crop',
-  },
-  {
-    id: '2',
-    title: 'Tesla Model 3',
-    subtitle: 'Matte black wrap',
-    original: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?q=80&w=2671&auto=format&fit=crop',
-    generated: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?q=80&w=2070&auto=format&fit=crop',
-  },
-  {
-    id: '3',
-    title: 'Porsche 911',
-    subtitle: 'Cyberpunk neon style',
-    original: 'https://images.unsplash.com/photo-1593353798398-6024b7444bb6?q=80&w=1964&auto=format&fit=crop',
-    generated: 'https://images.unsplash.com/photo-1580274455191-1c62238fa333?q=80&w=1964&auto=format&fit=crop',
-  },
-];
+import api from '../api/api';
 
 export default function HomeScreen({ navigation }) {
   const { user, credits, updateCredits, logout } = useContext(AuthContext);
   const [refreshing, setRefreshing] = useState(false);
+  const [featuredImages, setFeaturedImages] = useState([]);
+
+  const insets = useSafeAreaInsets();
+
+  const fetchFeaturedImages = async () => {
+    try {
+      const response = await api.get('/images/featured');
+      const data = response.data;
+
+      const mappedImages = [];
+      // Combine adjacent items: index i=generated, i+1=original
+      for (let i = 0; i < data.length; i += 2) {
+        if (i + 1 < data.length) {
+          const generatedItem = data[i];
+          const originalItem = data[i + 1];
+
+          mappedImages.push({
+            id: generatedItem.id.toString(),
+            original: originalItem.image_url,
+            generated: generatedItem.image_url,
+          });
+        }
+      }
+      setFeaturedImages(mappedImages);
+    } catch (error) {
+      console.log('Error fetching featured images:', error);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
       updateCredits();
+      fetchFeaturedImages();
     }, [])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await updateCredits();
+    await Promise.all([updateCredits(), fetchFeaturedImages()]);
     setRefreshing(false);
   };
 
@@ -54,57 +59,85 @@ export default function HomeScreen({ navigation }) {
     <TransformationCard item={item} />
   );
 
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <Text style={styles.headerSubtitle}>Daily Inspiration</Text>
+      <Text style={styles.headerTitle}>Discover</Text>
+    </View>
+  );
+
   return (
     <LinearGradient
-      colors={['#1B4CFF', '#8B2EFF']}
+      colors={['#0f0c29', '#302b63', '#24243e']} // Deep Midnight Purple/Blue
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={styles.container}
     >
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Explore</Text>
+      {/* Top Bar */}
+      <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
+        <View style={styles.logoContainer}>
+          <Ionicons name="car-sport" size={24} color="#D4ACFB" />
+          <Text style={styles.appName}>WrapMyCars</Text>
         </View>
 
         <View style={styles.rightCol}>
           <CreditBadge credits={credits} />
-
-          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings')}>
-            <Ionicons name="settings-outline" size={24} color="#fff" />
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() => navigation.navigate('Settings')}
+          >
+            <Ionicons name="options" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Main Feed */}
       <FlatList
-        data={MOCK_FEED}
+        data={featuredImages}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={{ padding: 16, paddingBottom: 100 }} // padding for FAB
+        ListHeaderComponent={renderHeader}
+        // contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120, paddingTop: 10 }}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#fff"
-            colors={['#fff']}
+            tintColor="#A742EA"
+            colors={['#A742EA', '#fff']}
+            progressBackgroundColor="#1a1a1a"
           />
+        }
+        ListEmptyComponent={
+          !refreshing && (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="images-outline" size={48} color="rgba(255,255,255,0.3)" />
+              <Text style={styles.emptyText}>No featured transformations yet.</Text>
+            </View>
+          )
         }
       />
 
       {/* Floating Action Button for Create */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate('Generate')}
-        activeOpacity={0.8}
-      >
-        <LinearGradient
-          colors={['#fff', '#f0f0f0']}
-          style={styles.fabGradient}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => navigation.navigate('Generate')}
+          activeOpacity={0.9}
         >
-          <Ionicons name="add" size={32} color="#1B4CFF" />
-        </LinearGradient>
-      </TouchableOpacity>
+          <LinearGradient
+            colors={['#D4145A', '#FBB03B']} // Sunset / Fire gradient for action
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.fabGradient}
+          >
+            <Ionicons name="sparkles" size={28} color="#fff" />
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
 
     </LinearGradient>
   );
@@ -112,17 +145,22 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20, // status bar space
+    paddingBottom: 10,
   },
-  headerTitle: {
-    fontSize: 34,
-    fontWeight: '800',
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  appName: {
     color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
   rightCol: {
@@ -130,26 +168,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12
   },
-  iconBtn: {
-    padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
+  settingsBtn: {
+    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
-  fab: {
+
+  // List
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 120,
+  },
+  headerContainer: {
+    marginBottom: 20,
+    marginTop: 20,
+  },
+  headerSubtitle: {
+    color: '#D4ACFB',
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 36,
+    fontWeight: '800',
+    lineHeight: 42,
+  },
+
+  // FAB
+  fabContainer: {
     position: 'absolute',
     bottom: 30,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    width: '100%',
+    alignItems: 'center',
+    pointerEvents: 'box-none', // Let clicks pass through if not on button
+  },
+  fab: {
+    shadowColor: '#D4145A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 24,
   },
   fabGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
+
+  // Empty State
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 80,
+    gap: 16,
+  },
+  emptyText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 16,
+  }
 });

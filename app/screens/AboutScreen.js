@@ -1,12 +1,15 @@
 // app/screens/AboutScreen.js
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 
+import { theme } from '../constants/theme';
+
 export default function AboutScreen({ navigation }) {
     return (
-        <LinearGradient colors={['#1B4CFF', '#8B2EFF']} style={styles.background}>
+        <LinearGradient colors={theme.gradients.midnight} style={styles.background}>
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -39,12 +42,15 @@ export default function AboutScreen({ navigation }) {
 const styles = StyleSheet.create({
     background: { flex: 1 },
     safeArea: { flex: 1 },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-    headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+    header: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        padding: 16, paddingTop: Platform.OS === 'android' ? 40 : 16
+    },
+    headerTitle: { fontSize: 20, fontWeight: '700', color: theme.colors.text },
     backBtn: { padding: 8 },
     content: { padding: 20, alignItems: 'center' },
     logoContainer: { alignItems: 'center', marginBottom: 32, marginTop: 20 },
-    appName: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginTop: 16 },
-    version: { color: 'rgba(255,255,255,0.5)', marginTop: 8 },
-    text: { color: 'rgba(255,255,255,0.8)', fontSize: 16, lineHeight: 24, textAlign: 'center' },
+    appName: { fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginTop: 16 },
+    version: { color: theme.colors.textDim, marginTop: 8 },
+    text: { color: theme.colors.textDim, fontSize: 16, lineHeight: 24, textAlign: 'center' },
 });

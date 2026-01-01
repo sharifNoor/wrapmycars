@@ -1,12 +1,12 @@
 // app/api/api.js
 import axios from 'axios';
-import { getToken } from '../utils/storage';
+import { getToken, removeToken } from '../utils/storage';
 
 // Set your backend base URL here.
 // During development, set to LAN IP like http://192.168.1.100:3000
 // For Android emulator use http://10.0.2.2:3000
 
-export const API_BASE_URL = __DEV__ ? 'http://192.168.1.7:4000/api' : 'https://api.yourdomain.com'; // <-- replace
+export const API_BASE_URL = __DEV__ ? 'http://192.168.1.5:4000/api' : 'https://api.yourdomain.com'; // <-- replace
 
 const instance = axios.create({
   baseURL: API_BASE_URL,
@@ -16,8 +16,16 @@ const instance = axios.create({
 instance.interceptors.response.use(
   response => response,
   async error => {
-    if (error.response?.status === 401) {
-      console.log('⚠️ Unauthorized (401) — clearing token');
+    const status = error.response?.status;
+    const data = error.response?.data;
+
+    if (status === 401 || status === 403) {
+      console.log(`⚠️ Auth Error (${status}) — clearing token`);
+
+      // Preserve message if it's "Account has been deactivated"
+      if (data?.message) {
+        error.userMessage = data.message;
+      }
 
       // Remove token from storage
       await removeToken();
@@ -25,8 +33,7 @@ instance.interceptors.response.use(
       // Remove from axios headers
       instance.setToken(null);
 
-      // You CANNOT navigate from inside api.js
-      // Instead: send a special error so AuthContext can handle logout
+      // Signal AuthContext
       error.isUnauthorized = true;
     }
 

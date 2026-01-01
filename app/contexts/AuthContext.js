@@ -2,6 +2,9 @@
 import React, { createContext, useState, useEffect } from 'react';
 import { getToken, saveToken, removeToken } from '../utils/storage';
 import api from '../api/api';
+import { useAlert } from './AlertContext';
+
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export const AuthContext = createContext();
 
@@ -10,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setTokenState] = useState(null);
   const [user, setUser] = useState(null);
   const [credits, setCredits] = useState(null);
+  const { showAlert } = useAlert();
 
   // 🔥 Helper: update token everywhere
   const setToken = (newToken) => {
@@ -28,7 +32,13 @@ export const AuthProvider = ({ children }) => {
 
       // Handle auto-logout if API flagged unauthorized
       if (err.isUnauthorized) {
+        const msg = err.userMessage || 'Your session has expired. Please login again.';
         await logout();
+        showAlert({
+          type: 'error',
+          title: 'Session Expired',
+          message: msg,
+        });
       }
     }
   };
@@ -71,6 +81,44 @@ export const AuthProvider = ({ children }) => {
     setCredits(null);
   };
 
+  // Configure Google Sign-In once on mount
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: '509902062436-m4etenp2g3llb1f3dceekcaoek6sq7l6.apps.googleusercontent.com',
+      offlineAccess: true,
+    });
+  }, []);
+
+  const googleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+
+      if (!idToken) throw new Error('No ID Token found');
+
+      // Send to YOUR backend
+      const res = await api.post('/auth/google', { token: idToken });
+
+      const { token: jwt, user: userData } = res.data;
+      await login({ token: jwt, user: userData });
+      return true;
+
+    } catch (error) {
+      console.log('Google Sign-In Error:', error);
+      if (error.code === 'SIGN_IN_CANCELLED') {
+        // user cancelled the login flow
+      } else {
+        showAlert({
+          type: 'error',
+          title: 'Error',
+          message: 'Google Sign-In failed',
+        });
+      }
+      return false;
+    }
+  };
+
   // Expose helper for Stripe & generator to update credits
   const updateCredits = async () => {
     await fetchCredits();
@@ -86,6 +134,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         updateCredits,
+        googleLogin,
       }}
     >
       {children}
