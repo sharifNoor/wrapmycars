@@ -10,6 +10,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { Linking } from 'react-native';
 import api from './api/api';
 import { StripeProvider } from '@stripe/stripe-react-native';
+import { notificationService } from './utils/NotificationService';
 
 
 function RootNavigator() {
@@ -41,7 +42,15 @@ function RootNavigator() {
         });
 
         const sub = Linking.addEventListener('url', handleUrl);
-        return () => sub.remove();
+
+        // Initialize Notifications
+        notificationService.requestUserPermission();
+        notificationService.createNotificationListeners();
+
+        return () => {
+            sub.remove();
+            notificationService.removeListeners();
+        };
     }, []);
 
 
