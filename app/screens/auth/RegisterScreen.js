@@ -18,6 +18,7 @@ import { useAlert } from '../../contexts/AlertContext';
 import Button from '../../components/Button';
 
 import { theme } from '../../constants/theme';
+import { analyticsService } from '../../utils/AnalyticsService';
 
 export default function RegisterScreen({ navigation }) {
     const [email, setEmail] = useState('');
@@ -32,6 +33,7 @@ export default function RegisterScreen({ navigation }) {
         setLoading(true);
         try {
             await api.post('/auth/register', { name, email, password });
+            await analyticsService.logSignUp('email');
             // Navigate to VerifyEmail, passing necessary details
             navigation.navigate('VerifyEmail', { email, password });
         } catch (err) {

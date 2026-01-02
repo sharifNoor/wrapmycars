@@ -16,6 +16,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
 import Button from '../../components/Button';
 import { theme } from '../../constants/theme';
+import { analyticsService } from '../../utils/AnalyticsService';
 
 export default function LoginScreen({ navigation }) {
     const [email, setEmail] = useState('');
@@ -30,6 +31,7 @@ export default function LoginScreen({ navigation }) {
         try {
             const res = await api.post('/auth/login', { email, password });
             const { token, user } = res.data;
+            await analyticsService.logLogin('email');
             await login({ token, user });
         } catch (err) {
             console.warn(err?.response?.data || err.message);

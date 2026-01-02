@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect } from 'react';
 import { getToken, saveToken, removeToken } from '../utils/storage';
 import api from '../api/api';
 import { useAlert } from './AlertContext';
+import { analyticsService } from '../utils/AnalyticsService';
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
@@ -53,6 +54,7 @@ export const AuthProvider = ({ children }) => {
           // Optionally fetch user profile
           const profile = await api.get('/auth/me');
           setUser(profile.data.user);
+          await analyticsService.setUserId(profile.data.user.id.toString());
           await fetchCredits(); // fetch credits immediately
         }
       } catch (e) {
@@ -69,6 +71,10 @@ export const AuthProvider = ({ children }) => {
     await saveToken(newToken);
     setToken(newToken);
     setUser(userData ?? null);
+
+    if (userData) {
+      await analyticsService.setUserId(userData.id.toString());
+    }
 
     await fetchCredits(); // load credits after login
   };
@@ -101,6 +107,7 @@ export const AuthProvider = ({ children }) => {
       const res = await api.post('/auth/google', { token: idToken });
 
       const { token: jwt, user: userData } = res.data;
+      await analyticsService.logLogin('google');
       await login({ token: jwt, user: userData });
       return true;
 

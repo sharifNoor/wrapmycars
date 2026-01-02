@@ -79,7 +79,7 @@ export default function HomeScreen({ navigation }) {
       <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
         <View style={styles.logoContainer}>
           <Ionicons name="car-sport" size={24} color="#D4ACFB" />
-          <Text style={styles.appName}>WrapMyCars</Text>
+          <Text style={styles.appName}>Wrap My Cars</Text>
         </View>
 
         <View style={styles.rightCol}>

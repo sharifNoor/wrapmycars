@@ -10,6 +10,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useStripe } from '@stripe/stripe-react-native';
 
 import { theme } from '../constants/theme';
+import { analyticsService } from '../utils/AnalyticsService';
 
 export default function BillingScreen({ navigation }) {
   const { credits, updateCredits } = useContext(AuthContext);
@@ -70,6 +71,7 @@ export default function BillingScreen({ navigation }) {
         }
       } else {
         // Success - Stripe automatically saves the payment method to the customer
+        await analyticsService.logPurchase(9.99);
         showAlert({ type: 'success', title: 'Success', message: 'Credits purchased successfully!' });
         await updateCredits();
       }

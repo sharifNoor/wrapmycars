@@ -17,6 +17,7 @@ import { useAlert } from '../contexts/AlertContext';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { MODIFICATION_TYPES, COLORS, FINISHES, WHEEL_STYLES, BODYKIT_STYLES, TINT_LEVELS } from '../data/dummyData';
 import { theme } from '../constants/theme';
+import { analyticsService } from '../utils/AnalyticsService';
 
 export default function GenerateScreen() {
   const { credits, updateCredits } = useContext(AuthContext);
@@ -194,6 +195,7 @@ export default function GenerateScreen() {
       }
 
       addToHistory(image_url);
+      await analyticsService.logEvent('generate_image', { prompt: finalPrompt });
       await updateCredits();
 
     } catch (err) {

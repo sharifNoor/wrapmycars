@@ -9,6 +9,7 @@ import api from '../api/api';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 
 import { theme } from '../constants/theme';
+import { analyticsService } from '../utils/AnalyticsService';
 
 export default function SettingsScreen({ navigation }) {
   const { user, logout } = useContext(AuthContext);
@@ -59,6 +60,7 @@ export default function SettingsScreen({ navigation }) {
             setLoading(true);
             try {
               await api.delete('/auth/account');
+              await analyticsService.logEvent('delete_account');
               await logout();
             } catch (err) {
               console.warn('delete account failed', err?.response?.data || err?.message);
