@@ -1,6 +1,6 @@
 // app/screens/GenerateScreen.js
 import React, { useState, useContext, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, Share, Platform, PermissionsAndroid } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, Share, Platform, PermissionsAndroid, PanResponder } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
@@ -15,13 +15,36 @@ import CreditBadge from '../components/CreditBadge';
 import { AuthContext } from '../contexts/AuthContext';
 import { useAlert } from '../contexts/AlertContext';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { MODIFICATION_TYPES, COLORS, FINISHES, WHEEL_STYLES, BODYKIT_STYLES, TINT_LEVELS } from '../data/dummyData';
+import { MODIFICATION_TYPES, COLORS, FINISHES, WHEEL_STYLES, BODYKIT_STYLES, TINT_LEVELS, SPOILER_STYLES, DECAL_STYLES, STANCE_STYLES, LIGHT_STYLES, ENVIRONMENT_STYLES, ACCENT_STYLES, PATTERN_WRAPS } from '../data/dummyData';
 import { theme } from '../constants/theme';
 import { analyticsService } from '../utils/AnalyticsService';
+
+const HUE_COLORS = [
+  '#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ff0000'
+];
+
+const TIPS = [
+  { id: '1', icon: 'sunny-outline', text: 'Good lighting works best' },
+  { id: '2', icon: 'camera-outline', text: 'Capture the full car angle' },
+  { id: '3', icon: 'color-wand-outline', text: 'Avoid shadows and reflections' },
+];
+
+const FEATURED_EXAMPLES = [
+  { id: '1', label: 'Matte Black Wrap', image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format' },
+  { id: '2', label: 'Racing Red Paint', image: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format' },
+  { id: '3', label: 'Widebody Kit', image: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format' },
+];
 
 export default function GenerateScreen() {
   const { credits, updateCredits } = useContext(AuthContext);
   const { showAlert } = useAlert();
+
+  // Color Picker State
+  const [hueWidth, setHueWidth] = useState(0);
+  const hueValue = useMemo(() => {
+    // If we have a custom hex, try to estimate hue if possible (optional)
+    return 0.5; // Default center
+  }, []);
 
   // --- STATE ---
   const [history, setHistory] = useState([]);
@@ -96,16 +119,27 @@ export default function GenerateScreen() {
   };
 
   const handleApplyCustomization = () => {
-    // Add to pending
+    // Add or Update in pending
     if (!selectedModType) return;
+
+    const existingIndex = pendingModifications.findIndex(m => m.modType.id === selectedModType.id);
 
     const newMod = {
       modType: selectedModType,
       customization: currentCustomization,
-      id: uuidv4(),
+      id: existingIndex >= 0 ? pendingModifications[existingIndex].id : uuidv4(),
     };
 
-    setPendingModifications([...pendingModifications, newMod]);
+    if (existingIndex >= 0) {
+      // Update existing
+      const updatedMods = [...pendingModifications];
+      updatedMods[existingIndex] = newMod;
+      setPendingModifications(updatedMods);
+    } else {
+      // Add new
+      setPendingModifications([...pendingModifications, newMod]);
+    }
+
     // Return to grid
     setSelectedModType(null);
     setCurrentCustomization({});
@@ -116,12 +150,50 @@ export default function GenerateScreen() {
   };
 
 
+  const hueToHex = (h) => {
+    const r = Math.max(0, Math.min(255, Math.abs(h * 6 - 3) - 1));
+    const g = Math.max(0, Math.min(255, 2 - Math.abs(h * 6 - 2)));
+    const b = Math.max(0, Math.min(255, 2 - Math.abs(h * 6 - 4)));
+
+    // Simpler Hue to RGB for 0-1 range
+    const f = (n, k = (n + h * 6) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+    const rgb = [f(5), f(3), f(1)].map(v => Math.round(v * 255));
+
+    return `#${rgb.map(x => x.toString(16).padStart(2, '0')).join('')}`;
+  };
+
+  const createHueResponder = () => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: (evt, state) => handleHueTouch(evt, state),
+    onPanResponderMove: (evt, state) => handleHueTouch(evt, state),
+  });
+
+  const handleHueTouch = (evt) => {
+    if (hueWidth <= 0) return;
+    const x = Math.max(0, Math.min(evt.nativeEvent.locationX, hueWidth));
+    const h = x / hueWidth;
+    const hex = hueToHex(h);
+
+    setCurrentCustomization(prev => ({
+      ...prev,
+      color: { ...prev.color, hex, hue: h, isCustom: true, id: 'custom', name: 'Custom' }
+    }));
+  };
+
+  const hueResponder = useMemo(() => createHueResponder().panHandlers, [hueWidth]);
+
+
   // --- LOGIC ---
   const isStepComplete = useMemo(() => {
     if (!selectedModType) return false;
     if (!selectedModType.steps) return true;
     for (const step of selectedModType.steps) {
-      if (!currentCustomization[step]) return false;
+      if (step === 'custom_prompt') {
+        if (!currentCustomization[step] || currentCustomization[step].trim().length < 3) return false;
+      } else if (!currentCustomization[step]) {
+        return false;
+      }
     }
     return true;
   }, [selectedModType, currentCustomization]);
@@ -131,9 +203,12 @@ export default function GenerateScreen() {
 
     const parts = pendingModifications.map(mod => {
       let prompt = mod.modType.promptTemplate;
-      prompt = prompt.replace('{colorName}', mod.customization.color?.name || 'custom color');
+      prompt = prompt.replace('{car}', 'the car'); // Default to "the car" if {car} placeholder exists
+      prompt = prompt.replace('{colorName}', mod.customization.color?.isCustom ? `hex ${mod.customization.color.hex}` : (mod.customization.color?.name || 'custom color'));
       prompt = prompt.replace('{finish}', mod.customization.finish?.name || 'standard');
+      prompt = prompt.replace('{patternName}', mod.customization.pattern?.id === 'solid' ? '' : (mod.customization.pattern?.name || ''));
       prompt = prompt.replace('{styleName}', mod.customization.style?.name || 'custom');
+      prompt = prompt.replace('{customPrompt}', mod.customization.custom_prompt || '');
       return prompt;
     });
 
@@ -227,11 +302,12 @@ export default function GenerateScreen() {
     } else {
       // Prepare to customize
       if (existingIndex >= 0) {
-        // Optional: Edit existing? For now, let's just allow selecting to re-customize or add new?
-        // Simplest: Just open customization. Note: If we want to allow editing, we'd need to load currentCustomization from pending.
-        // For now, let's just open standard customization.
+        // Load existing customization for editing
+        setCurrentCustomization(pendingModifications[existingIndex].customization);
         setSelectedModType(mod);
       } else {
+        // New customization
+        setCurrentCustomization({});
         setSelectedModType(mod);
       }
     }
@@ -355,62 +431,64 @@ export default function GenerateScreen() {
   // --- RENDER HELPERS ---
 
   // 1. Mod Grid
-  const renderModGrid = () => (
-    <View style={styles.gridContainer}>
-      <Text style={styles.stepTitle}>Select Modification</Text>
+  function renderModGrid() {
+    return (
+      <View style={styles.gridContainer}>
+        <Text style={styles.stepTitle}>Select Modification</Text>
 
-      {/* Pending Chips */}
-      {pendingModifications.length > 0 && (
-        <ScrollView horizontal style={{ maxHeight: 50, marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
-          {pendingModifications.map(mod => (
-            <View key={mod.id} style={styles.chip}>
-              <Text style={styles.chipText}>{mod.modType.label}</Text>
-              <TouchableOpacity onPress={() => removePendingMod(mod.id)}>
-                <Ionicons name="close-circle" size={18} color="#fff" style={{ marginLeft: 4 }} />
-              </TouchableOpacity>
-            </View>
-          ))}
+        {/* Pending Chips */}
+        {pendingModifications.length > 0 && (
+          <ScrollView horizontal style={{ maxHeight: 50, marginBottom: 12 }} contentContainerStyle={{ gap: 8 }}>
+            {pendingModifications.map(mod => (
+              <View key={mod.id} style={styles.chip}>
+                <Text style={styles.chipText}>{mod.modType.label}</Text>
+                <TouchableOpacity onPress={() => removePendingMod(mod.id)}>
+                  <Ionicons name="close-circle" size={18} color="#fff" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        <ScrollView style={{ flex: 1 }}>
+          <View style={styles.grid}>
+            {MODIFICATION_TYPES.map(mod => {
+              const isApplied = pendingModifications.some(m => m.modType.id === mod.id);
+              return (
+                <TouchableOpacity
+                  key={mod.id}
+                  style={[
+                    styles.modCard,
+                    isApplied && { borderColor: '#0b63ff', borderWidth: 2, backgroundColor: 'rgba(255,255,255,0.15)' } // Highlight active mods
+                  ]}
+                  onPress={() => handleModSelect(mod)}
+                >
+                  <Ionicons name={mod.icon} size={32} color={isApplied ? '#0b63ff' : '#fff'} />
+                  <Text style={[styles.modLabel, isApplied && { color: '#0b63ff' }]}>{mod.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={{ height: 100 }} />
         </ScrollView>
-      )}
 
-      <ScrollView style={{ flex: 1 }}>
-        <View style={styles.grid}>
-          {MODIFICATION_TYPES.map(mod => {
-            const isApplied = pendingModifications.some(m => m.modType.id === mod.id);
-            return (
-              <TouchableOpacity
-                key={mod.id}
-                style={[
-                  styles.modCard,
-                  isApplied && { borderColor: '#0b63ff', borderWidth: 2, backgroundColor: 'rgba(255,255,255,0.15)' } // Highlight active mods
-                ]}
-                onPress={() => handleModSelect(mod)}
-              >
-                <Ionicons name={mod.icon} size={32} color={isApplied ? '#0b63ff' : '#fff'} />
-                <Text style={[styles.modLabel, isApplied && { color: '#0b63ff' }]}>{mod.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <View style={{ height: 100 }} />
-      </ScrollView>
-
-      {/* Floating Generate Button */}
-      {pendingModifications.length > 0 && (
-        <View style={styles.floatingBtnContainer}>
-          <Button
-            title={loading ? "Generating..." : `Generate (${pendingModifications.length})`}
-            onPress={handleGenerate}
-            disabled={loading}
-            style={{ shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10, elevation: 10 }}
-          />
-        </View>
-      )}
-    </View>
-  );
+        {/* Floating Generate Button */}
+        {pendingModifications.length > 0 && (
+          <View style={styles.floatingBtnContainer}>
+            <Button
+              title={loading ? "Generating..." : `Generate (${pendingModifications.length})`}
+              onPress={handleGenerate}
+              disabled={loading}
+              style={{ shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 10, elevation: 10 }}
+            />
+          </View>
+        )}
+      </View>
+    );
+  }
 
   // 2. Customization Screens
-  const renderCustomization = () => {
+  function renderCustomization() {
     const steps = selectedModType.steps || [];
 
     return (
@@ -432,7 +510,9 @@ export default function GenerateScreen() {
             steps.map(step => {
               if (step === 'color') return renderColorPicker();
               if (step === 'finish') return renderOptionSelector('finish', FINISHES, 'Select Finish');
+              if (step === 'pattern') return renderOptionSelector('pattern', PATTERN_WRAPS, 'Select Pattern');
               if (step === 'style') return renderStyleSelector();
+              if (step === 'custom_prompt') return renderCustomPromptInput();
             })
           )}
           <View style={{ height: 40 }} />
@@ -445,55 +525,177 @@ export default function GenerateScreen() {
         />
       </View>
     );
-  };
+  }
 
-  const renderColorPicker = () => (
-    <View key="color" style={styles.section}>
-      <Text style={styles.sectionTitle}>Select Color</Text>
-      <View style={styles.colorGrid}>
-        {COLORS.map(c => (
+  function renderColorPicker() {
+    const isCustom = currentCustomization.color?.isCustom;
+
+    return (
+      <View key="color" style={styles.section}>
+        <Text style={styles.sectionTitle}>Select Color</Text>
+        <View style={styles.colorCategoryGrid}>
           <TouchableOpacity
-            key={c.id}
-            style={[styles.colorCircle, { backgroundColor: c.color, borderWidth: currentCustomization.color?.id === c.id ? 2 : 0, borderColor: '#fff' }]}
-            onPress={() => setCurrentCustomization(prev => ({ ...prev, color: { name: c.label, id: c.id } }))}
-          />
-        ))}
-      </View>
-      <Text style={{ color: '#aaa', marginTop: 8 }}>Selected: {currentCustomization.color?.name || 'None'}</Text>
-    </View>
-  );
+            style={[styles.colorButton, isCustom && styles.colorButtonActive]}
+            onPress={() => setCurrentCustomization(prev => ({
+              ...prev,
+              color: { ...prev.color, name: 'Custom', id: 'custom', isCustom: true, hex: prev.color?.hex || '#ff0000' }
+            }))}
+          >
+            <Ionicons name="color-palette-outline" size={16} color={isCustom ? theme.colors.primary : "#fff"} />
+            <Text style={[styles.colorButtonText, isCustom && { color: theme.colors.primary }]}>Custom</Text>
+          </TouchableOpacity>
 
-  const renderStyleSelector = () => {
+          {COLORS.map(c => (
+            <TouchableOpacity
+              key={c.id}
+              style={[
+                styles.colorButton,
+                currentCustomization.color?.parentId === c.id && !isCustom && styles.colorButtonActive
+              ]}
+              onPress={() => setCurrentCustomization(prev => ({
+                ...prev,
+                color: { name: c.shades[0].name, id: c.shades[0].id, hex: c.shades[0].hex, parentId: c.id }
+              }))}
+            >
+              <View style={[styles.colorChip, { backgroundColor: c.color }]} />
+              <Text style={styles.colorButtonText}>{c.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Shades or Custom Picker */}
+        {currentCustomization.color?.parentId && !isCustom && (
+          <View style={styles.shadeGrid}>
+            {COLORS.find(c => c.id === currentCustomization.color.parentId).shades.map(s => (
+              <TouchableOpacity
+                key={s.id}
+                style={[
+                  styles.shadeCircle,
+                  { backgroundColor: s.hex, borderWidth: currentCustomization.color?.id === s.id ? 2 : 1 },
+                  { borderColor: currentCustomization.color?.id === s.id ? '#fff' : 'rgba(255,255,255,0.2)' }
+                ]}
+                onPress={() => setCurrentCustomization(prev => ({
+                  ...prev,
+                  color: { name: s.name, id: s.id, hex: s.hex, parentId: prev.color.parentId }
+                }))}
+              />
+            ))}
+          </View>
+        )}
+
+        {isCustom && (
+          <View style={styles.customColorArea}>
+            <Text style={styles.subLabel}>Hue Selection</Text>
+            <View
+              style={styles.hueContainer}
+              onLayout={(e) => setHueWidth(e.nativeEvent.layout.width)}
+              {...hueResponder}
+            >
+              <LinearGradient
+                colors={HUE_COLORS}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.hueBar}
+                pointerEvents="none"
+              />
+              <View
+                style={[
+                  styles.hueSlider,
+                  { left: `${(currentCustomization.color?.hue || 0) * 100}%` },
+                  { transform: [{ translateX: -12 }] }
+                ]}
+                pointerEvents="none"
+              />
+            </View>
+            <View style={styles.hexInputRow}>
+              <Text style={styles.hexPrefix}>#</Text>
+              <TextInput
+                style={styles.hexInput}
+                value={currentCustomization.color?.hex?.replace('#', '')}
+                onChangeText={(text) => {
+                  const hex = text.startsWith('#') ? text : `#${text}`;
+                  if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+                    setCurrentCustomization(prev => ({
+                      ...prev,
+                      color: { ...prev.color, hex }
+                    }));
+                  }
+                }}
+                maxLength={6}
+                placeholder="FFFFFF"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+              />
+              <View style={[styles.colorPreview, { backgroundColor: currentCustomization.color?.hex || '#ff0000' }]} />
+            </View>
+          </View>
+        )}
+
+        <Text style={styles.selectedColorText}>
+          Selected: {currentCustomization.color?.name || 'None'} {currentCustomization.color?.hex}
+        </Text>
+      </View>
+    );
+  }
+
+  function renderStyleSelector() {
     let options = [];
     if (selectedModType.id === 'wheels') options = WHEEL_STYLES;
     if (selectedModType.id === 'bodykit') options = BODYKIT_STYLES;
     if (selectedModType.id === 'tint') options = TINT_LEVELS;
+    if (selectedModType.id === 'spoiler') options = SPOILER_STYLES;
+    if (selectedModType.id === 'decals') options = DECAL_STYLES;
+    if (selectedModType.id === 'stance') options = STANCE_STYLES;
+    if (selectedModType.id === 'lights_style') options = LIGHT_STYLES;
+    if (selectedModType.id === 'environment') options = ENVIRONMENT_STYLES;
+    if (selectedModType.id === 'accents') options = ACCENT_STYLES;
 
     return renderOptionSelector('style', options, 'Select Style');
-  };
+  }
 
-  const renderOptionSelector = (key, options, title) => (
-    <View key={key} style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {options.map(opt => (
-          <TouchableOpacity
-            key={opt.id}
-            style={[
-              styles.optionCard,
-              currentCustomization[key]?.id === opt.id && styles.optionSelected
-            ]}
-            onPress={() => setCurrentCustomization(prev => ({ ...prev, [key]: opt }))}
-          >
-            {opt.image ? (
-              <View style={{ width: 60, height: 60, backgroundColor: '#333', marginBottom: 8 }} />
-            ) : null}
-            <Text style={styles.optionText}>{opt.name}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
+  function renderOptionSelector(key, options, title) {
+    return (
+      <View key={key} style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <View style={styles.optionsGrid}>
+          {options.map(opt => (
+            <TouchableOpacity
+              key={opt.id}
+              style={[
+                styles.optionCard,
+                currentCustomization[key]?.id === opt.id && styles.optionSelected
+              ]}
+              onPress={() => setCurrentCustomization(prev => ({ ...prev, [key]: opt }))}
+            >
+              {opt.image ? (
+                <Image source={{ uri: opt.image }} style={styles.optionImage} />
+              ) : (
+                <View style={[styles.placeholderBox, { backgroundColor: 'rgba(255,255,255,0.05)' }]} />
+              )}
+              <Text style={styles.optionText} numberOfLines={1}>{opt.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  function renderCustomPromptInput() {
+    return (
+      <View key="custom_prompt" style={styles.section}>
+        <Text style={styles.sectionTitle}>Describe your modification</Text>
+        <TextInput
+          style={styles.customInput}
+          placeholder="e.g. Add a carbon fiber spoiler, police decals, etc."
+          placeholderTextColor="rgba(255,255,255,0.3)"
+          multiline
+          numberOfLines={4}
+          value={currentCustomization.custom_prompt || ''}
+          onChangeText={(text) => setCurrentCustomization(prev => ({ ...prev, custom_prompt: text }))}
+        />
+        <Text style={styles.inputHelp}>Be as descriptive as possible for best results.</Text>
+      </View>
+    );
+  }
 
 
   // --- MAIN RENDER ---
@@ -519,20 +721,73 @@ export default function GenerateScreen() {
           {/* Main Content Area */}
           <View style={{ flex: 1 }}>
             {currentIndex < 0 ? (
-              // Step 0: Pick Image
-              <View style={styles.centerContainer}>
-                <Text style={styles.promptText}>Start by uploading a photo of your car</Text>
-                <View style={{ flexDirection: 'row', gap: 16, marginTop: 20 }}>
-                  <TouchableOpacity style={styles.bigBtn} onPress={pickImage}>
-                    <Ionicons name="images-outline" size={40} color="#fff" />
-                    <Text style={styles.btnTxt}>Gallery</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.bigBtn} onPress={takePhoto}>
-                    <Ionicons name="camera-outline" size={40} color="#fff" />
-                    <Text style={styles.btnTxt}>Camera</Text>
-                  </TouchableOpacity>
+              // Step 0: Pick Image (Enhanced Empty State)
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.emptyStateContent}>
+                  <View style={styles.heroSection}>
+                    <Text style={styles.heroTitle}>Transform Your Ride</Text>
+                    <Text style={styles.heroSubtitle}>Upload a photo to start customizing with AI</Text>
+                  </View>
+
+                  <View style={styles.uploadRow}>
+                    <TouchableOpacity onPress={pickImage} style={{ flex: 1 }}>
+                      <LinearGradient
+                        colors={['rgba(167, 66, 234, 0.2)', 'rgba(167, 66, 234, 0.05)']}
+                        style={styles.uploadCard}
+                      >
+                        <View style={styles.iconCircle}>
+                          <Ionicons name="images" size={32} color={theme.colors.primary} />
+                        </View>
+                        <Text style={styles.uploadTitle}>Gallery</Text>
+                        <Text style={styles.uploadDesc}>Pick from library</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={takePhoto} style={{ flex: 1 }}>
+                      <LinearGradient
+                        colors={['rgba(212, 20, 90, 0.2)', 'rgba(212, 20, 90, 0.05)']}
+                        style={styles.uploadCard}
+                      >
+                        <View style={[styles.iconCircle, { backgroundColor: 'rgba(212, 20, 90, 0.1)' }]}>
+                          <Ionicons name="camera" size={32} color="#D4145A" />
+                        </View>
+                        <Text style={styles.uploadTitle}>Camera</Text>
+                        <Text style={styles.uploadDesc}>Snap a photo</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.tipsSection}>
+                    <Text style={styles.sectionHeading}>Pro Tips</Text>
+                    <View style={styles.tipsGrid}>
+                      {TIPS.map(tip => (
+                        <View key={tip.id} style={styles.tipItem}>
+                          <Ionicons name={tip.icon} size={20} color={theme.colors.secondary} />
+                          <Text style={styles.tipText}>{tip.text}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.examplesSection}>
+                    <Text style={styles.sectionHeading}>Get Inspired</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.examplesScroll}>
+                      {FEATURED_EXAMPLES.map(ex => (
+                        <View key={ex.id} style={styles.exampleCard}>
+                          <Image source={{ uri: ex.image }} style={styles.exampleImage} />
+                          <LinearGradient
+                            colors={['transparent', 'rgba(0,0,0,0.8)']}
+                            style={styles.exampleOverlay}
+                          >
+                            <Text style={styles.exampleLabel}>{ex.label}</Text>
+                          </LinearGradient>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
                 </View>
-              </View>
+                <View style={{ height: 40 }} />
+              </ScrollView>
             ) : (
               <View style={{ flex: 1 }}>
                 {!selectedModType && (
@@ -610,17 +865,66 @@ const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionTitle: { color: theme.colors.textDim, fontSize: 16, marginBottom: 12 },
 
-  colorGrid: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-  colorCircle: { width: 48, height: 48, borderRadius: 24 },
+  colorCategoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  colorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  colorButtonActive: {
+    backgroundColor: 'rgba(11,99,255,0.15)',
+    borderColor: '#0b63ff',
+  },
+  colorChip: { width: 16, height: 16, borderRadius: 8, marginRight: 8 },
+  colorButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
 
+  shadeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 },
+  shadeCircle: { width: 44, height: 44, borderRadius: 22 },
+
+  customColorArea: { marginTop: 16, backgroundColor: 'rgba(255,255,255,0.03)', padding: 16, borderRadius: 16 },
+  subLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginBottom: 8, fontWeight: '600' },
+  hueContainer: { height: 40, justifyContent: 'center', marginBottom: 16 },
+  hueBar: { height: 12, borderRadius: 6 },
+  hueSlider: {
+    position: 'absolute',
+    width: 24, height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#000',
+    elevation: 3,
+  },
+  hexInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hexPrefix: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  hexInput: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 10,
+    color: '#fff',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  colorPreview: { width: 50, height: 50, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  selectedColorText: { color: '#aaa', marginTop: 12, fontSize: 13 },
+
+  optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   optionCard: {
     backgroundColor: theme.colors.cardBackground, // Glass
-    padding: 12, borderRadius: 16, marginRight: 12,
-    minWidth: 100, alignItems: 'center',
+    padding: 8, borderRadius: 16,
+    width: '31%', alignItems: 'center',
     borderWidth: 1, borderColor: theme.colors.border
   },
   optionSelected: { borderColor: theme.colors.primary, backgroundColor: 'rgba(255,255,255,0.2)' },
-  optionText: { color: theme.colors.text, marginTop: 8, textAlign: 'center' },
+  optionText: { color: theme.colors.text, fontSize: 12, marginTop: 4, textAlign: 'center' },
+  optionImage: { width: '100%', height: 60, borderRadius: 10, resizeMode: 'cover' },
+  placeholderBox: { width: '100%', height: 60, borderRadius: 10 },
 
   // Image Actions
   imageActions: {
@@ -643,4 +947,78 @@ const styles = StyleSheet.create({
   },
 
   centerMsg: { padding: 40, alignItems: 'center' },
+
+  // Enhanced Empty State Styles
+  emptyStateContent: { padding: 20 },
+  heroSection: { alignItems: 'center', marginVertical: 32 },
+  heroTitle: { fontSize: 32, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 8 },
+  heroSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.6)', textAlign: 'center' },
+
+  uploadRow: { flexDirection: 'row', gap: 16, marginBottom: 40 },
+  uploadCard: {
+    height: 160,
+    borderRadius: 24,
+    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(167, 66, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  uploadTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  uploadDesc: { fontSize: 13, color: 'rgba(255,255,255,0.4)' },
+
+  tipsSection: { marginBottom: 40 },
+  sectionHeading: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 16 },
+  tipsGrid: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 20,
+    padding: 20,
+    gap: 16,
+  },
+  tipItem: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  tipText: { color: 'rgba(255,255,255,0.8)', fontSize: 15 },
+
+  examplesSection: { marginBottom: 20 },
+  examplesScroll: { gap: 16 },
+  exampleCard: {
+    width: 200,
+    height: 140,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#333',
+  },
+  exampleImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  exampleOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    padding: 12,
+  },
+  exampleLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
+
+  customInput: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    padding: 16,
+    color: '#fff',
+    fontSize: 16,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  inputHelp: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 12,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
 });

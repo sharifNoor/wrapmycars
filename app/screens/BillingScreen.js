@@ -45,10 +45,10 @@ export default function BillingScreen({ navigation }) {
             primary: theme.colors.primary,
             background: '#1c1c1c', // Stripe specific, keep dark
             componentBackground: '#2c2c2c',
-            componentBorder: theme.colors.border,
+            // componentBorder: theme.colors.border,
             componentDivider: '#555555',
             primaryText: '#ffffff',
-            secondaryText: theme.colors.textDim,
+            // secondaryText: theme.colors.textDim,
             componentText: '#ffffff',
             placeholderText: '#888888',
           },
@@ -143,8 +143,8 @@ export default function BillingScreen({ navigation }) {
 
             <View style={styles.packageContent}>
               <View>
-                <Text style={styles.packTitle}>50 Credits</Text>
-                <Text style={styles.packDesc}>~50 AI Transformations</Text>
+                <Text style={styles.packTitle}>15 Credits</Text>
+                <Text style={styles.packDesc}>~15 AI Transformations</Text>
               </View>
               <View style={styles.priceContainer}>
                 <Text style={styles.price}>$9.99</Text>
