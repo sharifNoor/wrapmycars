@@ -667,7 +667,7 @@ export default function GenerateScreen() {
               onPress={() => setCurrentCustomization(prev => ({ ...prev, [key]: opt }))}
             >
               {opt.image ? (
-                <Image source={{ uri: opt.image }} style={styles.optionImage} />
+                <Image source={opt.image} style={styles.optionImage} />
               ) : (
                 <View style={[styles.placeholderBox, { backgroundColor: 'rgba(255,255,255,0.05)' }]} />
               )}

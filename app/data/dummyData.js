@@ -198,76 +198,76 @@ export const COLORS = [
 ];
 
 export const FINISHES = [
-    { id: 'gloss', name: 'Gloss', image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&w=400' },
-    { id: 'matte', name: 'Matte', image: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&w=400' },
-    { id: 'satin', name: 'Satin', image: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&w=400' },
-    { id: 'chrome', name: 'Chrome', image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&w=400' },
+    { id: 'gloss', name: 'Gloss', image: require('../assets/wraps/gloss.jpeg') },
+    { id: 'matte', name: 'Matte', image: require('../assets/wraps/matte.jpeg') },
+    { id: 'satin', name: 'Satin', image: require('../assets/wraps/satin.jpeg') },
+    { id: 'chrome', name: 'Chrome', image: require('../assets/wraps/chrome.jpeg') },
 ];
 
 export const WHEEL_STYLES = [
-    { id: 'luxury', name: 'Luxury', image: 'https://images.unsplash.com/photo-1486496572940-2bb2341fdbdf?auto=format&w=400' },
-    { id: 'racing', name: 'Racing', image: 'https://images.unsplash.com/photo-1580273916550-13b3e59f81f2?auto=format&w=400' },
-    { id: 'classic', name: 'Classic', image: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&w=400' },
-    { id: 'modern', name: 'Modern', image: 'https://images.unsplash.com/photo-1506197603488-810cd049c661?auto=format&w=400' },
+    { id: 'luxury', name: 'Luxury', image: require('../assets/wheels/luxury.jpeg') },
+    { id: 'racing', name: 'Racing', image: require('../assets/wheels/racing.jpeg') },
+    { id: 'classic', name: 'Classic', image: require('../assets/wheels/classic.jpeg') },
+    { id: 'modern', name: 'Modern', image: require('../assets/wheels/modern.jpeg') },
 ];
 
 export const BODYKIT_STYLES = [
-    { id: 'widebody', name: 'Widebody', image: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&w=400' },
-    { id: 'perform', name: 'Performance', image: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&w=400' },
+    { id: 'widebody', name: 'Widebody', image: require('../assets/body_kits/widebody.jpeg') },
+    { id: 'perform', name: 'Performance', image: require('../assets/body_kits/perform.jpg') },
 ];
 
 export const SPOILER_STYLES = [
-    { id: 'ducktail', name: 'Ducktail', image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c34b?auto=format&w=200' },
-    { id: 'wing', name: 'GT Wing', image: 'https://images.unsplash.com/photo-1611859266238-4b98091d9d9b?auto=format&w=200' },
-    { id: 'lip', name: 'Lip Spoiler', image: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&w=200' },
-    { id: 'active', name: 'Active Aero', image: 'https://images.unsplash.com/photo-1603584173870-7f1cfca5215d?auto=format&w=200' },
+    { id: 'ducktail', name: 'Ducktail', image: require('../assets/spoilers/ducktail.jpeg') },
+    { id: 'wing', name: 'GT Wing', image: require('../assets/spoilers/wing.jpeg') },
+    { id: 'lip', name: 'Lip Spoiler', image: require('../assets/spoilers/lip.jpeg') },
+    { id: 'active', name: 'Active Aero', image: require('../assets/spoilers/active.jpeg') },
 ];
 
 export const DECAL_STYLES = [
-    { id: 'racing_stripes', name: 'Racing Stripes', image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&w=200' },
-    { id: 'side_decals', name: 'Side Decals', image: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&w=200' },
-    { id: 'geometric', name: 'Geometric Pattern', image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&w=200' },
+    { id: 'racing_stripes', name: 'Racing Stripes', image: require('../assets/decal/racing_stripes.jpg') },
+    { id: 'side_decals', name: 'Side Decals', image: require('../assets/decal/side_decals.jpg') },
+    { id: 'geometric', name: 'Geometric Pattern', image: require('../assets/decal/geometric.jpg') },
 ];
 
 export const STANCE_STYLES = [
-    { id: 'slammed', name: 'Slammed (Lowered)', image: 'https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&w=200' },
-    { id: 'lifted', name: 'Lifted (Off-road)', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&w=200' },
-    { id: 'track', name: 'Track Ready', image: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&w=200' },
+    { id: 'slammed', name: 'Slammed (Lowered)', image: require('../assets/stances/slammed.jpeg') },
+    { id: 'lifted', name: 'Lifted (Off-road)', image: require('../assets/stances/lifted.jpeg') },
+    { id: 'track', name: 'Track Ready', image: require('../assets/stances/track.jpeg') },
 ];
 
 export const LIGHT_STYLES = [
-    { id: 'smoked', name: 'Smoked Tints', image: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&w=200' },
-    { id: 'yellow', name: 'Yellow (JDM Style)', image: 'https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&w=200' },
-    { id: 'led_strip', name: 'LED Accent Strip', image: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&w=200' },
+    { id: 'smoked', name: 'Smoked Tints', image: require('../assets/lights/smoked.jpg') },
+    { id: 'yellow', name: 'Yellow (JDM Style)', image: require('../assets/lights/yellow.jpeg') },
+    { id: 'led_strip', name: 'LED Accent Strip', image: require('../assets/lights/led_strip.jpg') },
 ];
 
 export const ENVIRONMENT_STYLES = [
-    { id: 'cyberpunk', name: 'Cyberpunk City', image: 'https://images.unsplash.com/photo-1514565131-fce0801e007d?auto=format&w=200' },
-    { id: 'track', name: 'Race Track', image: 'https://images.unsplash.com/photo-1541185933-ef5d8ed016c2?auto=format&w=200' },
-    { id: 'beach', name: 'Sunset Beach', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&w=200' },
-    { id: 'showroom', name: 'Luxury Showroom', image: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&w=200' },
+    { id: 'cyberpunk', name: 'Cyberpunk City', image: require('../assets/environment/cyberpunk.jpg') },
+    { id: 'track', name: 'Race Track', image: require('../assets/environment/track.jpg') },
+    { id: 'beach', name: 'Sunset Beach', image: require('../assets/environment/beach.jpg') },
+    { id: 'showroom', name: 'Luxury Showroom', image: require('../assets/environment/showroom.jpg') },
 ];
 
 export const ACCENT_STYLES = [
-    { id: 'carbon_hood', name: 'Carbon Fiber Hood', image: 'https://images.unsplash.com/photo-1580273916550-13b3e59f81f2?auto=format&w=200' },
-    { id: 'roof_rack', name: 'Roof Rack', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&w=200' },
-    { id: 'hood_scoop', name: 'Hood Scoop', image: 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&w=200' },
+    { id: 'carbon_hood', name: 'Carbon Fiber Hood', image: require('../assets/accent/carbon_hood.jpeg') },
+    { id: 'roof_rack', name: 'Roof Rack', image: require('../assets/accent/roof_rack.jpg') },
+    { id: 'hood_scoop', name: 'Hood Scoop', image: require('../assets/accent/hood_scoop.jpeg') },
 ];
 
 export const PATTERN_WRAPS = [
-    { id: 'solid', name: 'Solid Color' },
-    { id: 'floral', name: 'Floral Pattern', image: 'https://images.unsplash.com/photo-1582234371023-591f73c5e627?auto=format&w=400' },
-    { id: 'geometric', name: 'Geometric Pattern', image: 'https://images.unsplash.com/photo-1550684848-86a5eb6557cc?auto=format&w=400' },
-    { id: 'camo', name: 'Digital Camo', image: 'https://images.unsplash.com/photo-1579546673265-92a8a56f6605?auto=format&w=400' },
-    { id: 'psychedelic', name: 'Psychedelic Wrap', image: 'https://images.unsplash.com/photo-1550859492-d5da9d8e45f3?auto=format&w=400' },
-    { id: 'carbon_fiber', name: 'Carbon Fiber Weave', image: 'https://images.unsplash.com/photo-1506197603488-810cd049c661?auto=format&w=400' },
+    { id: 'solid', name: 'Solid Color', image: require('../assets/patterns/solid.jpeg') },
+    { id: 'floral', name: 'Floral Pattern', image: require('../assets/patterns/floral.jpeg') },
+    { id: 'geometric', name: 'Geometric Pattern', image: require('../assets/patterns/geometric.jpeg') },
+    { id: 'camo', name: 'Digital Camo', image: require('../assets/patterns/camo.jpeg') },
+    { id: 'psychedelic', name: 'Psychedelic Wrap', image: require('../assets/patterns/psychedelic.jpeg') },
+    { id: 'carbon_fiber', name: 'Carbon Fiber Weave', image: require('../assets/patterns/carbon_fiber.jpeg') },
 ];
 
 export const TINT_LEVELS = [
-    { id: 'light', name: 'Light (50% Density)', density: 0.2 },
-    { id: 'medium', name: 'Medium (35% Density)', density: 0.4 },
-    { id: 'dark', name: 'Dark (20% Density)', density: 0.6 },
-    { id: 'limo', name: 'Limo (5% Density)', density: 0.8 },
+    { id: 'light', name: 'Light (50% Density)', image: require('../assets/tints/light.jpeg'), density: 0.2 },
+    { id: 'medium', name: 'Medium (35% Density)', image: require('../assets/tints/medium.jpeg'), density: 0.4 },
+    { id: 'dark', name: 'Dark (20% Density)', image: require('../assets/tints/dark.jpeg'), density: 0.6 },
+    { id: 'limo', name: 'Limo (5% Density)', image: require('../assets/tints/limo.jpeg'), density: 0.8 },
 ];
 
 // Helper to get options for a step
