@@ -10,7 +10,7 @@ import { theme } from '../constants/theme';
 export default function ContactScreen({ navigation }) {
 
     const handleEmail = () => {
-        Linking.openURL('mailto:support@wrapmycars.com');
+        Linking.openURL('mailto:support@cryptofogs.com');
     };
 
     return (
@@ -33,7 +33,7 @@ export default function ContactScreen({ navigation }) {
                         <Ionicons name="mail-outline" size={32} color="#fff" />
                         <View style={styles.cardText}>
                             <Text style={styles.cardTitle}>Email Support</Text>
-                            <Text style={styles.cardSub}>support@wrapmycars.com</Text>
+                            <Text style={styles.cardSub}>support@cryptofogs.com</Text>
                         </View>
                         <Ionicons name="chevron-forward" size={24} color={theme.colors.textDim} />
                     </TouchableOpacity>

@@ -183,7 +183,7 @@ export default function SettingsScreen({ navigation }) {
             <RenderRow
               icon="star-outline"
               label="Rate Us"
-              onPress={() => Linking.openURL('https://wrapmycars.ai')}
+              onPress={() => Linking.openURL('https://play.google.com/store/apps/details?id=com.wrapmycars')}
               isLast
             />
           </RenderSection>
