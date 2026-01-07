@@ -16,8 +16,8 @@ const CARD_WIDTH = SCREEN_WIDTH - 32; // horiz padding 16*2
 const CARD_HEIGHT = 280;
 
 // Placeholder constants
-const PLACEHOLDER_CAR = 'https://images.unsplash.com/photo-1494905998402-395d579af36f?q=80&w=2073&auto=format&fit=crop';
-const PLACEHOLDER_WRAPPED = 'https://images.unsplash.com/photo-1617788138017-80ad40651399?q=80&w=2070&auto=format&fit=crop';
+const PLACEHOLDER_CAR = require('../assets/placeholder_car.jpeg');
+const PLACEHOLDER_WRAPPED = require('../assets/placeholder_wrapped.jpeg');
 
 // Generate a "torn paper" rugged path with variable width
 // Returns objects: { separator: string, clip: string }

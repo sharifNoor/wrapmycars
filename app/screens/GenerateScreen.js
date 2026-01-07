@@ -30,9 +30,9 @@ const TIPS = [
 ];
 
 const FEATURED_EXAMPLES = [
-  { id: '1', label: 'Matte Black Wrap', image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format' },
-  { id: '2', label: 'Racing Red Paint', image: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format' },
-  { id: '3', label: 'Widebody Kit', image: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format' },
+  { id: '1', label: 'Matte Black Wrap', image: require('../assets/matte_black_wrap.jpeg') },
+  { id: '2', label: 'Racing Red Paint', image: require('../assets/racing_red_paint.jpeg') },
+  { id: '3', label: 'Widebody Kit', image: require('../assets/widebody_kit.jpeg') },
 ];
 
 export default function GenerateScreen() {
