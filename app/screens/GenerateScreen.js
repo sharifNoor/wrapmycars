@@ -774,7 +774,7 @@ export default function GenerateScreen() {
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.examplesScroll}>
                       {FEATURED_EXAMPLES.map(ex => (
                         <View key={ex.id} style={styles.exampleCard}>
-                          <Image source={{ uri: ex.image }} style={styles.exampleImage} />
+                          <Image source={ex.image} style={styles.exampleImage} />
                           <LinearGradient
                             colors={['transparent', 'rgba(0,0,0,0.8)']}
                             style={styles.exampleOverlay}

@@ -10,7 +10,7 @@ export const MODIFICATION_TYPES = [
     },
     {
         id: 'custom',
-        label: 'Try your own creativity',
+        label: 'with your own creativity',
         description: 'Describe any modification',
         icon: 'create-outline',
         promptTemplate: '{customPrompt}',

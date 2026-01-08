@@ -1,5 +1,5 @@
 // app/screens/BillingScreen.js
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -15,18 +15,37 @@ import { analyticsService } from '../utils/AnalyticsService';
 export default function BillingScreen({ navigation }) {
   const { credits, updateCredits } = useContext(AuthContext);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
-  const [loading, setLoading] = useState(false);
+  const [activePriceId, setActivePriceId] = useState(null);
   const { showAlert } = useAlert();
+  const [packages, setPackages] = useState([]);
+  const [fetchingPackages, setFetchingPackages] = useState(true);
+
+  useEffect(() => {
+    fetchPackages();
+  }, []);
+
+  const fetchPackages = async () => {
+    try {
+      setFetchingPackages(true);
+      const res = await api.get('/billing/packages');
+      console.log('Packages response:', JSON.stringify(res.data));
+      setPackages(res.data);
+    } catch (err) {
+      console.error('Fetch Packages Error:', err);
+      showAlert({ type: 'error', title: 'Error', message: 'Failed to fetch packages' });
+    } finally {
+      setFetchingPackages(false);
+    }
+  };
 
 
-  const buyCredits = async () => {
-    setLoading(true);
+  const buyCredits = async (pkg) => {
+    setActivePriceId(pkg.price_id);
     try {
       // 1. Fetch Payment Intent & Ephemeral Key from Backend
-      console.log('Requesting payment sheet setup...');
+      console.log('Requesting payment sheet setup for:', pkg.name);
       const res = await api.post('/billing/mobile-checkout', {
-        // priceId: 'price_1SjVqBE0yTvNMAdBdajdKzo1'  // Live
-        priceId: 'price_1SjWSBCVl0h0gHG1cgoxOkQd'  // Test
+        priceId: pkg.price_id
       });
 
       console.log('Backend response:', res.data);
@@ -71,7 +90,7 @@ export default function BillingScreen({ navigation }) {
         }
       } else {
         // Success - Stripe automatically saves the payment method to the customer
-        await analyticsService.logPurchase(9.99);
+        await analyticsService.logPurchase(pkg.amount);
         showAlert({ type: 'success', title: 'Success', message: 'Credits purchased successfully!' });
         await updateCredits();
       }
@@ -99,7 +118,7 @@ export default function BillingScreen({ navigation }) {
         message: `Status: ${err?.response?.status || 'Unknown'}\n${errorMessage}`,
       });
     } finally {
-      setLoading(false);
+      setActivePriceId(null);
     }
   };
 
@@ -131,30 +150,39 @@ export default function BillingScreen({ navigation }) {
 
           <Text style={styles.sectionTitle}>Available Packages</Text>
 
-          {/* Package Card */}
-          <TouchableOpacity
-            style={styles.packageCard}
-            onPress={buyCredits}
-            disabled={loading}
-          >
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>BEST VALUE</Text>
-            </View>
+          {fetchingPackages ? (
+            <Text style={styles.loadingText}>Loading packages...</Text>
+          ) : (
+            packages.map((pkg) => {
+              return (
+                <TouchableOpacity
+                  key={pkg.price_id || pkg.id}
+                  style={[styles.packageCard, pkg.is_default && { borderColor: theme.colors.primary }]}
+                  onPress={() => buyCredits(pkg)}
+                  disabled={!!activePriceId}
+                >
+                  {!!pkg.is_default && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>BEST VALUE</Text>
+                    </View>
+                  )}
+                  <View style={styles.packageContent}>
+                    <View>
+                      <Text style={styles.packTitle}>{pkg.credits} {pkg.name}</Text>
+                      <Text style={styles.packDesc}>~{Math.floor(pkg.credits / 3)} AI Transformations</Text>
+                    </View>
+                    <View style={styles.priceContainer}>
+                      <Text style={styles.price}>${pkg.amount}</Text>
+                    </View>
+                  </View>
 
-            <View style={styles.packageContent}>
-              <View>
-                <Text style={styles.packTitle}>15 Credits</Text>
-                <Text style={styles.packDesc}>~15 AI Transformations</Text>
-              </View>
-              <View style={styles.priceContainer}>
-                <Text style={styles.price}>$9.99</Text>
-              </View>
-            </View>
-
-            {loading && (
-              <Text style={styles.loadingText}>Initializing Payment...</Text>
-            )}
-          </TouchableOpacity>
+                  {activePriceId === pkg.price_id && (
+                    <Text style={styles.loadingText}>Initializing Payment...</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          )}
 
           <View style={styles.infoSection}>
             <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.textDim} />

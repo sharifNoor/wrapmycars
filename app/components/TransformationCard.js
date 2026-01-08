@@ -86,8 +86,8 @@ export default function TransformationCard({ item }) {
         });
 
     // Valid images
-    const originalUri = item.original || PLACEHOLDER_CAR;
-    const generatedUri = item.generated || PLACEHOLDER_WRAPPED;
+    const originalSource = typeof item.original === 'string' ? { uri: item.original } : (item.original || PLACEHOLDER_CAR);
+    const generatedSource = typeof item.generated === 'string' ? { uri: item.generated } : (item.generated || PLACEHOLDER_WRAPPED);
 
     // Animated Props
     // When pressed, we want to reveal the FULL Original image (standard comparison behavior)
@@ -127,7 +127,7 @@ export default function TransformationCard({ item }) {
                                 x="0" y="0"
                                 width="100%" height="100%"
                                 preserveAspectRatio="xMidYMid slice"
-                                href={{ uri: originalUri }}
+                                href={originalSource}
                             />
 
                             {/* 2. Top Layer: Generated Image (Right Side, Clipped) */}
@@ -135,7 +135,7 @@ export default function TransformationCard({ item }) {
                                 x="0" y="0"
                                 width="100%" height="100%"
                                 preserveAspectRatio="xMidYMid slice"
-                                href={{ uri: generatedUri }}
+                                href={generatedSource}
                                 clipPath="url(#rightClip)"
                             />
 
@@ -157,7 +157,7 @@ export default function TransformationCard({ item }) {
                     {/* Full Generated View (Revealed on Hold) */}
                     <Animated.View style={[StyleSheet.absoluteFill, fullGeneratedOpacity]}>
                         <Animated.Image
-                            source={{ uri: generatedUri }}
+                            source={generatedSource}
                             style={{ width: '100%', height: '100%' }}
                             resizeMode="cover"
                         />
@@ -188,7 +188,7 @@ export default function TransformationCard({ item }) {
 
                 </View>
             </View>
-        </GestureDetector>
+        </GestureDetector >
     );
 }
 

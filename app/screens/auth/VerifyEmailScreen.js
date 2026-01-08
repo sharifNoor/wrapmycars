@@ -1,4 +1,4 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -23,12 +23,47 @@ export default function VerifyEmailScreen({ route, navigation }) {
     const [loading, setLoading] = useState(false);
     const { login } = useContext(AuthContext);
     const { showAlert } = useAlert();
+    const [timer, setTimer] = useState(0);
+    const [resending, setResending] = useState(false);
     const inputRefs = useRef([]);
+
+    useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
 
     // Focus functionality for OTP inputs
     const handleOtpChange = (text, index) => {
+        // Handle Paste
+        if (text.length > 1) {
+            const cleanText = text.trim().replace(/[^0-9]/g, '').slice(0, 6);
+            if (cleanText.length > 0) {
+                const newOtp = [...otp];
+                const pasteData = cleanText.split('');
+
+                // If pasted into index 0, fill from start. If pasted elsewhere, fill from there.
+                // Usually users paste into the first box.
+                for (let i = 0; i < pasteData.length; i++) {
+                    if (index + i < 6) {
+                        newOtp[index + i] = pasteData[i];
+                    }
+                }
+                setOtp(newOtp);
+
+                // Focus the appropriate field
+                const nextFocusIndex = Math.min(index + pasteData.length, 5);
+                inputRefs.current[nextFocusIndex].focus();
+                return;
+            }
+        }
+
         const newOtp = [...otp];
-        newOtp[index] = text;
+        newOtp[index] = text.slice(-1); // Always take the last character typed
         setOtp(newOtp);
 
         if (text && index < 5) {
@@ -84,6 +119,30 @@ export default function VerifyEmailScreen({ route, navigation }) {
         }
     };
 
+    const handleResend = async () => {
+        if (timer > 0) return;
+
+        setResending(true);
+        try {
+            await api.post('/auth/resend-verification', { email });
+            setTimer(60);
+            showAlert({
+                type: 'success',
+                title: 'Code Resent',
+                message: 'A new verification code has been sent to your email.',
+            });
+        } catch (err) {
+            console.warn(err);
+            showAlert({
+                type: 'error',
+                title: 'Error',
+                message: err?.response?.data?.message || 'Failed to resend verification code',
+            });
+        } finally {
+            setResending(false);
+        }
+    };
+
     return (
         <LinearGradient colors={theme.gradients.midnight} style={styles.background}>
             <KeyboardAvoidingView
@@ -108,7 +167,7 @@ export default function VerifyEmailScreen({ route, navigation }) {
                                     ref={(ref) => (inputRefs.current[index] = ref)}
                                     style={styles.otpInput}
                                     keyboardType="number-pad"
-                                    maxLength={1}
+                                    maxLength={6} // Allow pasting
                                     value={digit}
                                     onChangeText={(text) => handleOtpChange(text, index)}
                                     onKeyPress={({ nativeEvent }) => {
@@ -128,6 +187,19 @@ export default function VerifyEmailScreen({ route, navigation }) {
                             gradientColors={theme.gradients.sunset}
                             style={{ marginTop: 24 }}
                         />
+
+                        <TouchableOpacity
+                            onPress={handleResend}
+                            disabled={resending || timer > 0}
+                            style={styles.resendBtn}
+                        >
+                            <Text style={[
+                                styles.resendText,
+                                (resending || timer > 0) && { color: theme.colors.textDim }
+                            ]}>
+                                {resending ? 'Resending...' : timer > 0 ? `Resend Code (${timer}s)` : 'Resend Code'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -183,5 +255,14 @@ const styles = StyleSheet.create({
         color: theme.colors.text,
         textAlign: 'center',
         fontSize: 14
+    },
+    resendBtn: {
+        marginTop: 20,
+        alignItems: 'center',
+    },
+    resendText: {
+        color: theme.colors.primary,
+        fontSize: 15,
+        fontWeight: '600',
     }
 });

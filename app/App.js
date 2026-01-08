@@ -68,7 +68,7 @@ function RootNavigator() {
 export default function App() {
     return (
         <StripeProvider
-            publishableKey="pk_test_51SjVkcCVl0h0gHG13XKOAXmS3a1B8g5XNjAQYCLghaZDU5WybArYjSrOk4LZy7pQFcDW3nkJQtiDqCFcsrifqIdA00sT8emK69"
+            publishableKey="pk_live_51SjVkOE0yTvNMAdBITx03TN0wfLXJKFf2GsCj0x70MwqY6exZ0E6uS7P3tcRlTuvOFatlvLe8NcX3jet1xVxRXdN00dwuPeqwn"
             merchantIdentifier="merchant.com.wrapmycars" // required for Apple Pay
         >
             <GestureHandlerRootView style={{ flex: 1 }}>
