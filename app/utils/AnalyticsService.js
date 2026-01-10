@@ -1,6 +1,10 @@
-import analytics from '@react-native-firebase/analytics';
+import { getAnalytics, logEvent, logSignUp, logLogin, logPurchase, setUserId, setUserProperty } from '@react-native-firebase/analytics';
 
 class AnalyticsService {
+    constructor() {
+        this.analytics = getAnalytics();
+    }
+
     /**
      * Log a custom event
      * @param {string} eventName 
@@ -8,7 +12,7 @@ class AnalyticsService {
      */
     async logEvent(eventName, params = {}) {
         try {
-            await analytics().logEvent(eventName, params);
+            await logEvent(this.analytics, eventName, params);
             console.log(`Analytics Event Logged: ${eventName}`, params);
         } catch (error) {
             console.error(`Error logging event ${eventName}:`, error);
@@ -20,7 +24,11 @@ class AnalyticsService {
      * @param {string} method - 'email', 'google', etc.
      */
     async logSignUp(method) {
-        await analytics().logSignUp({ method });
+        try {
+            await logSignUp(this.analytics, { method });
+        } catch (error) {
+            console.error('Error logging sign up:', error);
+        }
     }
 
     /**
@@ -28,7 +36,11 @@ class AnalyticsService {
      * @param {string} method - 'email', 'google', etc.
      */
     async logLogin(method) {
-        await analytics().logLogin({ method });
+        try {
+            await logLogin(this.analytics, { method });
+        } catch (error) {
+            console.error('Error logging login:', error);
+        }
     }
 
     /**
@@ -37,10 +49,14 @@ class AnalyticsService {
      * @param {string} currency - e.g. 'USD'
      */
     async logPurchase(value, currency = 'USD') {
-        await analytics().logPurchase({
-            value,
-            currency,
-        });
+        try {
+            await logPurchase(this.analytics, {
+                value,
+                currency,
+            });
+        } catch (error) {
+            console.error('Error logging purchase:', error);
+        }
     }
 
     /**
@@ -48,7 +64,11 @@ class AnalyticsService {
      * @param {string} id 
      */
     async setUserId(id) {
-        await analytics().setUserId(id);
+        try {
+            await setUserId(this.analytics, id);
+        } catch (error) {
+            console.error('Error setting user ID:', error);
+        }
     }
 
     /**
@@ -57,7 +77,11 @@ class AnalyticsService {
      * @param {string} value 
      */
     async setUserProperty(name, value) {
-        await analytics().setUserProperty(name, value);
+        try {
+            await setUserProperty(this.analytics, name, value);
+        } catch (error) {
+            console.error('Error setting user property:', error);
+        }
     }
 }
 

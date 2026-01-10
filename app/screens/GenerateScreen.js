@@ -63,9 +63,9 @@ export default function GenerateScreen() {
   // Current customization being edited
   const [currentCustomization, setCurrentCustomization] = useState({});
 
-  const addToHistory = (uri) => {
+  const addToHistory = (uri, id = null) => {
     const newHistory = history.slice(0, currentIndex + 1);
-    newHistory.push(uri);
+    newHistory.push({ uri, id });
     setHistory(newHistory);
     setCurrentIndex(newHistory.length - 1);
 
@@ -79,7 +79,7 @@ export default function GenerateScreen() {
     const res = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
     if (res.errorCode) return showAlert({ type: 'error', title: 'Error', message: res.errorMessage });
     if (!res.assets) return;
-    setHistory([res.assets[0].uri]);
+    setHistory([{ uri: res.assets[0].uri, id: null }]);
     setCurrentIndex(0);
     resetWizard();
   };
@@ -88,7 +88,7 @@ export default function GenerateScreen() {
     const res = await launchCamera({ mediaType: 'photo', quality: 0.8 });
     if (res.errorCode) return showAlert({ type: 'error', title: 'Error', message: res.errorMessage });
     if (!res.assets) return;
-    setHistory([res.assets[0].uri]);
+    setHistory([{ uri: res.assets[0].uri, id: null }]);
     setCurrentIndex(0);
     resetWizard();
   };
@@ -234,26 +234,32 @@ export default function GenerateScreen() {
     const finalPrompt = constructPrompt();
     console.log('Generating with prompt:', finalPrompt);
 
-    const currentImageUri = history[currentIndex];
+    const currentImage = history[currentIndex];
     setLoading(true);
     try {
       const idKey = uuidv4();
       const form = new FormData();
 
-      let imageForUpload = { uri: currentImageUri, name: 'image.jpg', type: 'image/jpeg' };
+      if (currentImage.id) {
+        // Use ID for sequential generation
+        form.append('input_image_id', currentImage.id.toString());
+      } else {
+        // Upload image blob for first time
+        let imageForUpload = { uri: currentImage.uri, name: 'image.jpg', type: 'image/jpeg' };
 
-      if (currentImageUri.startsWith('http')) {
-        try {
-          const base64Uri = await fetchImageAsBlob(currentImageUri);
-          imageForUpload = { uri: base64Uri, name: 'edited_image.jpg', type: 'image/jpeg' };
-        } catch (fetchErr) {
-          console.warn('Failed fetch', fetchErr);
-          setLoading(false);
-          return;
+        if (currentImage.uri.startsWith('http')) {
+          try {
+            const base64Uri = await fetchImageAsBlob(currentImage.uri);
+            imageForUpload = { uri: base64Uri, name: 'edited_image.jpg', type: 'image/jpeg' };
+          } catch (fetchErr) {
+            console.warn('Failed fetch', fetchErr);
+            setLoading(false);
+            return;
+          }
         }
+        form.append('image', imageForUpload);
       }
 
-      form.append('image', imageForUpload);
       form.append('prompt', finalPrompt);
 
       const response = await api.post('/generate', form, {
@@ -262,20 +268,24 @@ export default function GenerateScreen() {
           'x-idempotency-key': idKey,
         },
       });
-
-      let { image_url } = response.data;
+      console.log(response.data);
+      let { image_url, output_image_id } = response.data;
       if (image_url && image_url.includes('localhost')) {
         const ip = API_BASE_URL.split('://')[1].split(':')[0];
         image_url = image_url.replace('localhost', ip);
       }
 
-      addToHistory(image_url);
+      addToHistory(image_url, output_image_id);
       await analyticsService.logEvent('generate_image', { prompt: finalPrompt });
       await updateCredits();
 
     } catch (err) {
       console.warn(err);
-      showAlert({ type: 'error', title: 'Error', message: 'Generation failed' });
+      if (err.response?.status === 413) {
+        showAlert({ type: 'error', title: 'Error', message: 'The image is too large. Try uploading a smaller version.' });
+      } else {
+        showAlert({ type: 'error', title: 'Error', message: 'Generation failed' });
+      }
     } finally {
       setLoading(false);
     }
@@ -353,7 +363,7 @@ export default function GenerateScreen() {
     if (currentIndex < 0) return;
 
     try {
-      let imageUrl = history[currentIndex];
+      let imageUrl = history[currentIndex].uri;
 
       // Ensure absolute URL
       if (imageUrl.startsWith('/')) {
@@ -391,7 +401,7 @@ export default function GenerateScreen() {
   const handleShare = async () => {
     if (currentIndex < 0) return;
 
-    const imageUri = getAbsoluteImageUrl(history[currentIndex]);
+    const imageUri = getAbsoluteImageUrl(history[currentIndex].uri);
 
     try {
       let shareUri = imageUri;
@@ -792,7 +802,7 @@ export default function GenerateScreen() {
               <View style={{ flex: 1 }}>
                 {!selectedModType && (
                   <View style={{ height: 200, position: 'relative' }}>
-                    <ImagePreview uri={history[currentIndex]} />
+                    <ImagePreview uri={history[currentIndex].uri} />
 
                     {/* Action Buttons Overlay */}
                     <View style={styles.imageActions}>
