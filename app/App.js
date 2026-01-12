@@ -4,6 +4,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import AuthStack from './navigation/AuthStack';
 import AppStack from './navigation/AppStack';
+import LinearGradient from 'react-native-linear-gradient';
+import { theme } from './constants/theme';
 import { AuthProvider, AuthContext } from './contexts/AuthContext';
 import { AlertProvider } from './contexts/AlertContext';
 import { ActivityIndicator, View } from 'react-native';
@@ -56,9 +58,12 @@ function RootNavigator() {
 
     if (authLoading) {
         return (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator size="large" />
-            </View>
+            <LinearGradient
+                colors={['#0f0c29', '#302b63', '#24243e']}
+                style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+            >
+                <ActivityIndicator size="large" color="#D4ACFB" />
+            </LinearGradient>
         );
     }
 
