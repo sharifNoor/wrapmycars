@@ -1,17 +1,20 @@
 // app/screens/GenerateScreen.js
 import React, { useState, useContext, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, Share, Platform, PermissionsAndroid, PanResponder } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView, Image, Share, Platform, PermissionsAndroid, PanResponder, Modal } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import RNShare from 'react-native-share';
 import RNFS from 'react-native-fs';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import api, { API_BASE_URL } from '../api/api';
 import { v4 as uuidv4 } from 'uuid';
 import Button from '../components/Button';
 import ImagePreview from '../components/ImagePreview';
 import CreditBadge from '../components/CreditBadge';
+import ZoomableImage from '../components/ZoomableImage';
 import { AuthContext } from '../contexts/AuthContext';
 import { useAlert } from '../contexts/AlertContext';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
@@ -62,6 +65,7 @@ export default function GenerateScreen() {
 
   // Current customization being edited
   const [currentCustomization, setCurrentCustomization] = useState({});
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const addToHistory = (uri, id = null) => {
     const newHistory = history.slice(0, currentIndex + 1);
@@ -76,7 +80,12 @@ export default function GenerateScreen() {
   };
 
   const pickImage = async () => {
-    const res = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
+    const res = await launchImageLibrary({
+      mediaType: 'photo',
+      quality: 0.8,
+      maxWidth: 2000,
+      maxHeight: 2000,
+    });
     if (res.errorCode) return showAlert({ type: 'error', title: 'Error', message: res.errorMessage });
     if (!res.assets) return;
     setHistory([{ uri: res.assets[0].uri, id: null }]);
@@ -85,7 +94,12 @@ export default function GenerateScreen() {
   };
 
   const takePhoto = async () => {
-    const res = await launchCamera({ mediaType: 'photo', quality: 0.8 });
+    const res = await launchCamera({
+      mediaType: 'photo',
+      quality: 0.8,
+      maxWidth: 2000,
+      maxHeight: 2000,
+    });
     if (res.errorCode) return showAlert({ type: 'error', title: 'Error', message: res.errorMessage });
     if (!res.assets) return;
     setHistory([{ uri: res.assets[0].uri, id: null }]);
@@ -104,12 +118,13 @@ export default function GenerateScreen() {
       setCurrentIndex(currentIndex - 1);
       // Reset wizard
       resetWizard();
-    } else {
-      // Remove image if at start
-      setHistory([]);
-      setCurrentIndex(-1);
-      resetWizard();
     }
+  };
+
+  const handleExit = () => {
+    setHistory([]);
+    setCurrentIndex(-1);
+    resetWizard();
   };
 
   const handleBackFromCustomization = () => {
@@ -275,6 +290,13 @@ export default function GenerateScreen() {
         image_url = image_url.replace('localhost', ip);
       }
 
+      // Prefetch the image to ensure it's ready for rendering
+      try {
+        await Image.prefetch(image_url);
+      } catch (prefetchErr) {
+        console.warn('Prefetch failed', prefetchErr);
+      }
+
       addToHistory(image_url, output_image_id);
       await analyticsService.logEvent('generate_image', { prompt: finalPrompt });
       await updateCredits();
@@ -363,32 +385,44 @@ export default function GenerateScreen() {
     if (currentIndex < 0) return;
 
     try {
-      let imageUrl = history[currentIndex].uri;
-
-      // Ensure absolute URL
-      if (imageUrl.startsWith('/')) {
-        imageUrl = `${API_BASE_URL}${imageUrl}`;
-      }
-      debugger
+      let imageUrl = getAbsoluteImageUrl(history[currentIndex].uri);
       const filename = `wrapmycars_${Date.now()}.jpg`;
-      const localPath = `${RNFS.CachesDirectoryPath}/${filename}`;
 
-      // 1️⃣ Download image to local cache
-      const download = await RNFS.downloadFile({
-        fromUrl: imageUrl,
-        toFile: localPath,
-      }).promise;
+      if (Platform.OS === 'android') {
+        const { dirs } = ReactNativeBlobUtil.fs;
+        ReactNativeBlobUtil.config({
+          fileCache: true,
+          addAndroidDownloads: {
+            useDownloadManager: true,
+            notification: true,
+            path: `${dirs.DownloadDir}/${filename}`,
+            description: 'Downloading image from WrapMyCars',
+            mime: 'image/jpeg',
+            mediaScannable: true,
+          },
+        })
+          .fetch('GET', imageUrl)
+          .then((res) => {
+            console.log('File downloaded to: ', res.path());
+            showAlert({ type: 'success', title: 'Success', message: 'Download started...' });
+          })
+          .catch((err) => {
+            console.error('Download error:', err);
+            showAlert({ type: 'error', title: 'Error', message: 'Download failed' });
+          });
+      } else {
+        // iOS
+        const { dirs } = ReactNativeBlobUtil.fs;
+        const localPath = `${dirs.CacheDir}/${filename}`;
 
-      if (download.statusCode !== 200) {
-        throw new Error('Image download failed');
+        const res = await ReactNativeBlobUtil.config({
+          fileCache: true,
+          path: localPath,
+        }).fetch('GET', imageUrl);
+
+        await CameraRoll.save(`file://${res.path()}`, { type: 'photo' });
+        showAlert({ type: 'success', title: 'Success', message: 'Image saved to Photos!' });
       }
-
-      // 2️⃣ Save LOCAL file to gallery
-      await CameraRoll.save(`file://${localPath}`, {
-        type: 'photo',
-      });
-
-      showAlert({ type: 'success', title: 'Success', message: 'Image saved to gallery!' });
     } catch (error) {
       console.error('Download error:', error);
       showAlert({ type: 'error', title: 'Error', message: 'Failed to save image' });
@@ -715,14 +749,14 @@ export default function GenerateScreen() {
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
-            {/* Back Button */}
-            {currentIndex >= 0 && !selectedModType && (
-              <TouchableOpacity onPress={handleUndo} style={styles.backBtn}>
+            {/* Navigation Actions */}
+            {currentIndex >= 0 && !selectedModType ? (
+              <TouchableOpacity onPress={handleExit} style={styles.backBtn}>
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
+            ) : (
+              <View style={{ width: 40 }} />
             )}
-            {/* Spacer */}
-            {currentIndex < 0 || selectedModType ? <View style={{ width: 40 }} /> : null}
 
             <Text style={styles.title}>AI Generator</Text>
             <CreditBadge credits={credits} />
@@ -802,9 +836,24 @@ export default function GenerateScreen() {
               <View style={{ flex: 1 }}>
                 {!selectedModType && (
                   <View style={{ height: 200, position: 'relative' }}>
-                    <ImagePreview uri={history[currentIndex].uri} />
+                    <TouchableOpacity
+                      activeOpacity={0.9}
+                      onPress={() => setIsFullScreen(true)}
+                      style={{ flex: 1 }}
+                    >
+                      <ImagePreview uri={history[currentIndex].uri} />
+                    </TouchableOpacity>
 
-                    {/* Action Buttons Overlay */}
+                    {/* Action Buttons Overlay - Left */}
+                    {currentIndex > 0 && (
+                      <View style={styles.imageActionsLeft}>
+                        <TouchableOpacity style={styles.actionBtn} onPress={handleUndo}>
+                          <Ionicons name="arrow-undo-outline" size={24} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    {/* Action Buttons Overlay - Right */}
                     <View style={styles.imageActions}>
                       <TouchableOpacity style={styles.actionBtn} onPress={handleDownload}>
                         <Ionicons name="download-outline" size={24} color="#fff" />
@@ -819,6 +868,27 @@ export default function GenerateScreen() {
                 <View style={styles.controlsArea}>
                   {!selectedModType ? renderModGrid() : renderCustomization()}
                 </View>
+
+                {/* Full Screen Image Modal */}
+                <Modal
+                  visible={isFullScreen}
+                  transparent={true}
+                  animationType="fade"
+                  onRequestClose={() => setIsFullScreen(false)}
+                >
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <View style={styles.fullScreenModal}>
+                      <ZoomableImage uri={history[currentIndex]?.uri} />
+
+                      <TouchableOpacity
+                        style={styles.closeModalBtn}
+                        onPress={() => setIsFullScreen(false)}
+                      >
+                        <Ionicons name="close" size={32} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  </GestureHandlerRootView>
+                </Modal>
               </View>
             )}
           </View>
@@ -945,6 +1015,14 @@ const styles = StyleSheet.create({
     gap: 8,
     zIndex: 10,
   },
+  imageActionsLeft: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'row',
+    gap: 8,
+    zIndex: 10,
+  },
   actionBtn: {
     backgroundColor: 'rgba(0,0,0,0.6)',
     width: 44,
@@ -954,6 +1032,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
+  },
+
+  // Modal
+  fullScreenModal: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  closeModalBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    right: 20,
+    zIndex: 100,
+    padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 25,
   },
 
   centerMsg: { padding: 40, alignItems: 'center' },
