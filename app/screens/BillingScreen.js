@@ -22,6 +22,7 @@ export default function BillingScreen({ navigation }) {
 
   useEffect(() => {
     fetchPackages();
+    analyticsService.logViewItem('store_screen');
   }, []);
 
   const fetchPackages = async () => {
@@ -42,7 +43,10 @@ export default function BillingScreen({ navigation }) {
   const buyCredits = async (pkg) => {
     setActivePriceId(pkg.price_id);
     try {
-      // 1. Fetch Payment Intent & Ephemeral Key from Backend
+      // 1. Log Start of Checkout
+      await analyticsService.logBeginCheckout(pkg.amount, pkg.name);
+
+      // 2. Fetch Payment Intent & Ephemeral Key from Backend
       console.log('Requesting payment sheet setup for:', pkg.name);
       const res = await api.post('/billing/mobile-checkout', {
         priceId: pkg.price_id
@@ -90,7 +94,7 @@ export default function BillingScreen({ navigation }) {
         }
       } else {
         // Success - Stripe automatically saves the payment method to the customer
-        await analyticsService.logPurchase(pkg.amount);
+        await analyticsService.logPurchase(pkg.amount, paymentIntent);
         showAlert({ type: 'success', title: 'Success', message: 'Credits purchased successfully!' });
         await updateCredits();
       }

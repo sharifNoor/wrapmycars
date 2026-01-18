@@ -33,7 +33,6 @@ export default function RegisterScreen({ navigation }) {
         setLoading(true);
         try {
             await api.post('/auth/register', { name, email, password });
-            await analyticsService.logSignUp('email');
             // Navigate to VerifyEmail, passing necessary details
             navigation.navigate('VerifyEmail', { email, password });
         } catch (err) {

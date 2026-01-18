@@ -26,6 +26,7 @@ class AnalyticsService {
     async logSignUp(method) {
         try {
             await logSignUp(this.analytics, { method });
+            console.log(`Analytics Sign Up Logged: ${method}`);
         } catch (error) {
             console.error('Error logging sign up:', error);
         }
@@ -38,6 +39,7 @@ class AnalyticsService {
     async logLogin(method) {
         try {
             await logLogin(this.analytics, { method });
+            console.log(`Analytics Login Logged: ${method}`);
         } catch (error) {
             console.error('Error logging login:', error);
         }
@@ -46,16 +48,66 @@ class AnalyticsService {
     /**
      * Log Purchase/Credits Purchase
      * @param {number} value - Total value of purchase
+     * @param {string} transactionId - Stripe Payment Intent ID or similar
      * @param {string} currency - e.g. 'USD'
      */
-    async logPurchase(value, currency = 'USD') {
+    async logPurchase(value, transactionId, currency = 'USD') {
         try {
             await logPurchase(this.analytics, {
                 value,
                 currency,
+                transaction_id: transactionId,
+                items: [{
+                    item_id: 'credits_pack',
+                    item_name: 'Credits Package',
+                    price: value,
+                    quantity: 1
+                }]
             });
+            console.log(`Analytics Purchase Logged: $${value} ${currency} (ID: ${transactionId})`);
         } catch (error) {
             console.error('Error logging purchase:', error);
+        }
+    }
+
+    /**
+     * Log Start of Checkout
+     * @param {number} value 
+     * @param {string} pkgName 
+     */
+    async logBeginCheckout(value, pkgName) {
+        try {
+            await logEvent(this.analytics, 'begin_checkout', {
+                value,
+                currency: 'USD',
+                items: [{
+                    item_id: pkgName,
+                    item_name: pkgName,
+                    price: value,
+                    quantity: 1
+                }]
+            });
+            console.log(`Analytics Begin Checkout Logged: ${pkgName} ($${value})`);
+        } catch (error) {
+            console.error('Error logging begin checkout:', error);
+        }
+    }
+
+    /**
+     * Log View Item (Package)
+     * @param {string} itemName 
+     */
+    async logViewItem(itemName) {
+        try {
+            await logEvent(this.analytics, 'view_item', {
+                items: [{
+                    item_id: itemName,
+                    item_name: itemName,
+                }]
+            });
+            console.log(`Analytics View Item Logged: ${itemName}`);
+        } catch (error) {
+            console.error('Error logging view item:', error);
         }
     }
 

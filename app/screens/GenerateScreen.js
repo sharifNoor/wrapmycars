@@ -298,7 +298,15 @@ export default function GenerateScreen() {
       }
 
       addToHistory(image_url, output_image_id);
-      await analyticsService.logEvent('generate_image', { prompt: finalPrompt });
+
+      // Log event with modification types
+      const modTypes = pendingModifications.map(m => m.modType.id).join(',');
+      await analyticsService.logEvent('generate_image', {
+        prompt: finalPrompt,
+        mod_types: modTypes,
+        sequential: !!currentImage.id
+      });
+
       await updateCredits();
 
     } catch (err) {

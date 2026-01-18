@@ -16,6 +16,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
 import Button from '../../components/Button';
 import { theme } from '../../constants/theme';
+import { analyticsService } from '../../utils/AnalyticsService';
 
 export default function VerifyEmailScreen({ route, navigation }) {
     const { email, password } = route.params || {};
@@ -99,11 +100,13 @@ export default function VerifyEmailScreen({ route, navigation }) {
 
             if (res.data?.token) {
                 const { token, user } = res.data;
+                await analyticsService.logSignUp('email');
                 await login({ token, user });
             } else {
                 // Fallback if backend doesn't return token on verify, try explicit login
                 const loginRes = await api.post('/auth/login', { email, password });
                 const { token, user } = loginRes.data;
+                await analyticsService.logSignUp('email');
                 await login({ token, user });
             }
 
