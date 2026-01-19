@@ -26,7 +26,7 @@ export default function PrivacyScreen({ navigation }) {
                         {'\n\n'}
                         1. Introduction
                         {'\n'}
-                        Welcome to WrapMyCars. We respect your privacy and are committed to protecting your personal data.
+                        Welcome to Wrap my Cars. We respect your privacy and are committed to protecting your personal data.
                         {'\n\n'}
                         2. Data We Collect
                         {'\n'}

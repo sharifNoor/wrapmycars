@@ -22,12 +22,12 @@ export default function AboutScreen({ navigation }) {
                 <ScrollView contentContainerStyle={styles.content}>
                     <View style={styles.logoContainer}>
                         <Ionicons name="car-sport" size={80} color="#fff" />
-                        <Text style={styles.appName}>WrapMyCars AI</Text>
+                        <Text style={styles.appName}>Wrap my Cars AI</Text>
                         <Text style={styles.version}>v1.0.0</Text>
                     </View>
 
                     <Text style={styles.text}>
-                        WrapMyCars AI is the ultimate tool for car enthusiasts. visualizing modifications has never been easier.
+                        Wrap my Cars AI is the ultimate tool for car enthusiasts. visualizing modifications has never been easier.
                         {'\n\n'}
                         Using state-of-the-art Artificial Intelligence, we allow you to see how your car would look with different wraps, paint jobs, rims, and body kits in seconds.
                         {'\n\n'}
