@@ -58,7 +58,7 @@ export default function BillingScreen({ navigation }) {
 
       // 2. Initialize Payment Sheet
       const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'WrapMyCars',
+        merchantDisplayName: 'Wrap my Cars',
         customerId: customer,
         customerEphemeralKeySecret: ephemeralKey,
         paymentIntentClientSecret: paymentIntent,
