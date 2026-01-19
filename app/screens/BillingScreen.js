@@ -214,84 +214,102 @@ export default function BillingScreen({ navigation }) {
           <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-          {/* Balance Card */}
-          <View style={styles.balanceContainer}>
-            <Text style={styles.balanceLabel}>Your Balance</Text>
-            <View style={styles.balanceRow}>
-              <Ionicons name="flash" size={32} color="#FFD700" />
-              <Text style={styles.balanceValue}>{credits ?? 0}</Text>
+          {/* Compact Balance & Status Card */}
+          <View style={styles.compactStatusCard}>
+            <View style={styles.compactBalanceInfo}>
+              <Text style={styles.compactLabel}>Balance</Text>
+              <View style={styles.compactValueRow}>
+                <Ionicons name="flash" size={20} color="#FFD700" />
+                <Text style={styles.compactValue}>{credits ?? 0}</Text>
+              </View>
             </View>
-            <Text style={styles.balanceSub}>Credits available for generation</Text>
-            {isSubscribed && (
-              <>
-                <View style={styles.subscribedBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
-                  <Text style={styles.subscribedText}>PRO Subscription Active</Text>
-                </View>
-                {cancelAtPeriodEnd ? (
-                  <View style={styles.cancelWarning}>
-                    <Ionicons name="warning-outline" size={16} color="#FBB03B" />
-                    <Text style={styles.cancelWarningText}>
-                      Subscription will end at billing period
-                    </Text>
+
+            <View style={styles.compactDivider} />
+
+            <View style={styles.compactPlanMeta}>
+              <Text style={styles.compactLabel}>Status</Text>
+              {isSubscribed ? (
+                <View style={{ alignItems: 'center' }}>
+                  <View style={styles.activeSubscriberTag}>
+                    <Ionicons name="checkmark-circle" size={12} color={theme.colors.success} />
+                    <Text style={styles.activeSubscriberText}>PRO ACTIVE</Text>
                   </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.manageButton}
-                    onPress={handleManageSubscription}
-                  >
-                    <Ionicons name="settings-outline" size={16} color={theme.colors.primary} />
-                    <Text style={styles.manageButtonText}>Manage Subscription</Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
+                  {cancelAtPeriodEnd ? (
+                    <Text style={styles.cancelTinyText}>Subscription will end at billing period</Text>
+                  ) : (
+                    <TouchableOpacity style={styles.compactManageBtn} onPress={handleManageSubscription}>
+                      <Text style={styles.compactManageBtnText}>Manage</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                <Text style={styles.freePlanText}>Free Tier</Text>
+              )}
+            </View>
           </View>
+
+          {/* Pro Tip Callout (Moved Up) */}
+          <LinearGradient
+            colors={['rgba(167, 66, 234, 0.15)', 'rgba(167, 66, 234, 0.05)']}
+            style={styles.proTipContainer}
+          >
+            <View style={styles.proTipHeader}>
+              <Ionicons name="star" size={16} color={theme.colors.primary} />
+              <Text style={styles.proTipTitle}>PRO TIP</Text>
+            </View>
+            <Text style={styles.proTipText}>Subscribers get <Text style={{ fontWeight: '700', color: '#fff' }}>NO WATERMARKS</Text> and monthly credits. Keep your designs clean!</Text>
+          </LinearGradient>
 
           {/* Monthly Subscriptions */}
           {subscriptions.length > 0 && (
-            <>
-              <Text style={styles.sectionTitle}>Monthly Subscriptions</Text>
-              <Text style={styles.sectionSub}>Get monthly credits and remove all watermarks</Text>
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Monthly Subscriptions</Text>
+                <View style={styles.hLine} />
+              </View>
               {fetchingPackages ? (
                 <Text style={styles.loadingText}>Loading...</Text>
               ) : (
                 subscriptions.map(renderPackage)
               )}
-            </>
+            </View>
           )}
-
 
           {/* One-time Packs */}
-          <Text style={[styles.sectionTitle, { marginTop: 24 }]}>One-time Credit Packs</Text>
-          {fetchingPackages ? (
-            <Text style={styles.loadingText}>Loading...</Text>
-          ) : (
-            creditPacks.map(renderPackage)
-          )}
+          <View style={[styles.sectionContainer, { marginTop: 12 }]}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Credit Packs</Text>
+              <View style={styles.hLine} />
+            </View>
+            {fetchingPackages ? (
+              <Text style={styles.loadingText}>Loading...</Text>
+            ) : (
+              creditPacks.map(renderPackage)
+            )}
+          </View>
 
-          <View style={styles.subscriptionBenefits}>
-            <Text style={styles.benefitTitle}>Pro Benefits</Text>
-            <View style={styles.benefitRow}>
-              <Ionicons name="water-outline" size={20} color={theme.colors.primary} />
-              <Text style={styles.benefitText}>No watermark on downloads & shares</Text>
+          {/* Pro Benefits (Condensed) */}
+          <View style={styles.quickBenefitsRow}>
+            <View style={styles.benefitIconBox}>
+              <Ionicons name="water-outline" size={18} color={theme.colors.primary} />
+              <Text style={styles.benefitTinyText}>No Watermark</Text>
             </View>
-            <View style={styles.benefitRow}>
-              <Ionicons name="flash-outline" size={20} color={theme.colors.primary} />
-              <Text style={styles.benefitText}>Monthly recurring credits</Text>
+            <View style={styles.benefitIconBox}>
+              <Ionicons name="flash-outline" size={18} color={theme.colors.primary} />
+              <Text style={styles.benefitTinyText}>Monthly Credits</Text>
             </View>
-            <View style={styles.benefitRow}>
-              <Ionicons name="infinite-outline" size={20} color={theme.colors.primary} />
-              <Text style={styles.benefitText}>Priority support</Text>
+            <View style={styles.benefitIconBox}>
+              <Ionicons name="infinite-outline" size={18} color={theme.colors.primary} />
+              <Text style={styles.benefitTinyText}>Support</Text>
             </View>
           </View>
 
           <View style={styles.infoSection}>
-            <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.textDim} />
+            <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.textDim} />
             <Text style={styles.infoText}>
-              Secure payment processed by Stripe. Supports Apple Pay, Google Pay, and Cards.
+              Secure payment via Stripe. Supports Apple/Google Pay.
             </Text>
           </View>
 
@@ -313,84 +331,77 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: '700', color: theme.colors.text },
   backBtn: { padding: 8 },
 
-  scrollContent: { padding: 20 },
+  scrollContent: { padding: 16 },
 
-  // Balance
-  balanceContainer: {
-    alignItems: 'center', backgroundColor: theme.colors.cardBackground,
-    borderRadius: 20, padding: 24, marginBottom: 32,
-    borderWidth: 1, borderColor: theme.colors.border
-  },
-  balanceLabel: { color: theme.colors.textDim, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1 },
-  balanceRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
-  balanceValue: { fontSize: 48, fontWeight: '800', color: theme.colors.text, marginLeft: 8 },
-  balanceSub: { color: theme.colors.textDim, fontSize: 14 },
-  subscribedBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: 'rgba(76, 175, 80, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  subscribedText: { color: theme.colors.success, fontSize: 12, fontWeight: '600', marginLeft: 4 },
-  manageButton: {
+  // Compact Status Card
+  compactStatusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(167, 66, 234, 0.1)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: theme.colors.primary
+    borderColor: 'rgba(255,255,255,0.1)',
+    marginBottom: 12,
   },
-  manageButtonText: {
-    color: theme.colors.primary,
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4
-  },
-  cancelWarning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(251, 176, 59, 0.1)',
-    borderWidth: 1,
-    borderColor: '#FBB03B'
-  },
-  cancelWarningText: {
-    color: '#FBB03B',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4
-  },
+  compactBalanceInfo: { flex: 1, alignItems: 'center' },
+  compactPlanMeta: { flex: 1, alignItems: 'center' },
+  compactDivider: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.1)' },
+  compactLabel: { color: theme.colors.textDim, fontSize: 10, textTransform: 'uppercase', marginBottom: 4, letterSpacing: 0.5 },
+  compactValueRow: { flexDirection: 'row', alignItems: 'center' },
+  compactValue: { fontSize: 20, fontWeight: '800', color: '#fff', marginLeft: 4 },
 
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: theme.colors.text, marginBottom: 4 },
-  sectionSub: { fontSize: 12, color: theme.colors.textDim, marginBottom: 16 },
+  activeSubscriberTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0, 250, 154, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  activeSubscriberText: { color: theme.colors.success, fontSize: 10, fontWeight: '700', marginLeft: 4 },
+  freePlanText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+
+  compactManageBtn: { marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, backgroundColor: 'rgba(167, 66, 234, 0.1)', borderWidth: 0.5, borderColor: theme.colors.primary },
+  compactManageBtnText: { color: theme.colors.primary, fontSize: 8, fontWeight: '700' },
+  cancelTinyText: { color: '#FBB03B', fontSize: 8, marginTop: 4, fontWeight: '600' },
+
+  // Pro Tip (Moved Up)
+  proTipContainer: {
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(167, 66, 234, 0.3)',
+  },
+  proTipHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  proTipTitle: { color: theme.colors.primary, fontSize: 12, fontWeight: '900', marginLeft: 6, letterSpacing: 1 },
+  proTipText: { color: 'rgba(255,255,255,0.7)', fontSize: 12, lineHeight: 18 },
+
+  sectionContainer: { marginBottom: 8 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text, textTransform: 'uppercase', letterSpacing: 0.5 },
+  hLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginLeft: 12 },
 
   // Package Card
   packageCard: {
-    backgroundColor: theme.colors.cardBackground, borderRadius: 16, padding: 20,
-    borderWidth: 1, borderColor: theme.colors.border,
-    marginBottom: 16, position: 'relative', overflow: 'hidden'
+    backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 10, position: 'relative', overflow: 'hidden'
   },
   badge: {
     position: 'absolute', top: 0, right: 0, backgroundColor: theme.colors.primary,
-    paddingHorizontal: 12, paddingVertical: 4, borderBottomLeftRadius: 16
+    paddingHorizontal: 10, paddingVertical: 2, borderBottomLeftRadius: 10
   },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  badgeText: { color: '#fff', fontSize: 8, fontWeight: '800' },
 
   packageContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  packTitle: { fontSize: 20, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
-  packDesc: { color: theme.colors.textDim, fontSize: 14, flex: 1, marginRight: 8 },
+  packTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
+  packDesc: { color: theme.colors.textDim, fontSize: 12, marginTop: 2 },
 
-  priceContainer: { backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  price: { color: '#000', fontWeight: '700', fontSize: 14 },
+  priceContainer: { backgroundColor: '#fff', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  price: { color: '#000', fontWeight: '800', fontSize: 13 },
 
-  loadingText: { color: theme.colors.primary, marginTop: 12, fontWeight: '600', textAlign: 'center' },
+  loadingText: { color: theme.colors.primary, marginVertical: 12, fontWeight: '600', textAlign: 'center', fontSize: 12 },
 
-  subscriptionBenefits: { marginTop: 32, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 20 },
-  benefitTitle: { color: '#fff', fontSize: 16, fontWeight: '700', marginBottom: 16 },
-  benefitRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  benefitText: { color: theme.colors.textDim, fontSize: 14, marginLeft: 12 },
+  // Benefits Row
+  quickBenefitsRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 20, paddingVertical: 16, backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: 12 },
+  benefitIconBox: { alignItems: 'center' },
+  benefitTinyText: { color: theme.colors.textDim, fontSize: 10, marginTop: 4, fontWeight: '500' },
 
-  infoSection: { flexDirection: 'row', marginTop: 24, paddingHorizontal: 16 },
-  infoText: { color: theme.colors.textDim, fontSize: 12, marginLeft: 8, flex: 1, lineHeight: 18 },
+  infoSection: { flexDirection: 'row', marginTop: 16, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
+  infoText: { color: 'rgba(255,255,255,0.3)', fontSize: 10, marginLeft: 6, textAlign: 'center' },
 });
