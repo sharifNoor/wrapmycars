@@ -14,6 +14,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setTokenState] = useState(null);
   const [user, setUser] = useState(null);
   const [credits, setCredits] = useState(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [currentPlanId, setCurrentPlanId] = useState(null);
   const { showAlert } = useAlert();
 
   // 🔥 Helper: update token everywhere
@@ -28,6 +30,14 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.get('/billing/credits');
       setCredits(res.data?.credits ?? 0);
+      if (res.data?.hasOwnProperty('is_subscribed')) {
+        setIsSubscribed(!!res.data.is_subscribed);
+        setCurrentPlanId(res.data.current_plan);
+        console.log('🔍 AuthContext - Fetched subscription status:', {
+          is_subscribed: res.data.is_subscribed,
+          current_plan: res.data.current_plan
+        });
+      }
     } catch (err) {
       console.warn('fetchCredits error', err?.response?.data || err?.message);
 
@@ -54,6 +64,7 @@ export const AuthProvider = ({ children }) => {
           // Optionally fetch user profile
           const profile = await api.get('/auth/me');
           setUser(profile.data.user);
+          setIsSubscribed(!!profile.data.user.is_subscribed);
           await analyticsService.setUserId(profile.data.user.id.toString());
           await fetchCredits(); // fetch credits immediately
         }
@@ -71,6 +82,7 @@ export const AuthProvider = ({ children }) => {
     await saveToken(newToken);
     setToken(newToken);
     setUser(userData ?? null);
+    setIsSubscribed(!!userData?.is_subscribed);
 
     if (userData) {
       await analyticsService.setUserId(userData.id.toString());
@@ -85,6 +97,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setCredits(null);
+    setIsSubscribed(false);
   };
 
   // Configure Google Sign-In once on mount
@@ -99,9 +112,20 @@ export const AuthProvider = ({ children }) => {
     try {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data?.idToken;
 
-      if (!idToken) throw new Error('No ID Token found');
+      // Try different possible locations for the ID token
+      const idToken = userInfo.idToken || userInfo.data?.idToken || userInfo?.user?.idToken;
+
+      console.log('Google Sign-In Response:', {
+        hasIdToken: !!idToken,
+        userInfoKeys: Object.keys(userInfo),
+        dataKeys: userInfo.data ? Object.keys(userInfo.data) : null
+      });
+
+      if (!idToken) {
+        console.error('Full userInfo object:', JSON.stringify(userInfo, null, 2));
+        throw new Error('No ID Token found in Google Sign-In response');
+      }
 
       // Send to YOUR backend
       const res = await api.post('/auth/google', { token: idToken });
@@ -129,6 +153,18 @@ export const AuthProvider = ({ children }) => {
   // Expose helper for Stripe & generator to update credits
   const updateCredits = async () => {
     await fetchCredits();
+
+    // Also refresh profile to get isSubscribed status
+    try {
+      const profile = await api.get('/auth/me');
+      if (profile.data?.user) {
+        setIsSubscribed(!!profile.data.user.is_subscribed);
+        setCurrentPlanId(profile.data.user.current_plan);
+        setUser(profile.data.user);
+      }
+    } catch (e) {
+      console.warn('Failed to refresh profile in updateCredits', e);
+    }
   };
 
   return (
@@ -137,6 +173,8 @@ export const AuthProvider = ({ children }) => {
         token,
         user,
         credits,
+        isSubscribed,
+        currentPlanId,
         authLoading,
         login,
         logout,

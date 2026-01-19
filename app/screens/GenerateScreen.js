@@ -8,6 +8,7 @@ import { launchImageLibrary, launchCamera } from 'react-native-image-picker';
 import RNShare from 'react-native-share';
 import RNFS from 'react-native-fs';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import ImageMarker from 'react-native-image-marker';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import api, { API_BASE_URL } from '../api/api';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,6 +22,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { MODIFICATION_TYPES, COLORS, FINISHES, WHEEL_STYLES, BODYKIT_STYLES, TINT_LEVELS, SPOILER_STYLES, DECAL_STYLES, STANCE_STYLES, LIGHT_STYLES, ENVIRONMENT_STYLES, ACCENT_STYLES, PATTERN_WRAPS } from '../data/dummyData';
 import { theme } from '../constants/theme';
 import { analyticsService } from '../utils/AnalyticsService';
+import WatermarkAsset from '../assets/Watermark.png';
 
 const HUE_COLORS = [
   '#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ff0000'
@@ -39,7 +41,7 @@ const FEATURED_EXAMPLES = [
 ];
 
 export default function GenerateScreen() {
-  const { credits, updateCredits } = useContext(AuthContext);
+  const { credits, updateCredits, isSubscribed } = useContext(AuthContext);
   const { showAlert } = useAlert();
 
   // Color Picker State
@@ -240,7 +242,6 @@ export default function GenerateScreen() {
       reader.readAsDataURL(blob);
     });
   };
-
   const handleGenerate = async () => {
     if (currentIndex < 0) return showAlert({ type: 'error', title: 'Error', message: 'Please choose an image' });
     if (pendingModifications.length === 0) return showAlert({ type: 'error', title: 'Error', message: 'Please select at least one modification' });
@@ -297,7 +298,19 @@ export default function GenerateScreen() {
         console.warn('Prefetch failed', prefetchErr);
       }
 
-      addToHistory(image_url, output_image_id);
+      let finalUri = image_url;
+      if (!isSubscribed) {
+        try {
+          // Apply watermark immediately so it shows on screen
+          finalUri = await processImageForExport(image_url);
+        } catch (pwErr) {
+          console.warn('Failed to apply preview watermark', pwErr);
+          // Fallback to original if watermarking fails for any reason
+          finalUri = image_url;
+        }
+      }
+
+      addToHistory(finalUri, output_image_id);
 
       // Log event with modification types
       const modTypes = pendingModifications.map(m => m.modType.id).join(',');
@@ -354,24 +367,24 @@ export default function GenerateScreen() {
   };
 
   const requestStoragePermission = async () => {
-    return true;
-
     if (Platform.OS !== 'android') return true;
 
     try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-        {
-          title: 'Storage Permission',
-          message: 'App needs access to save images',
-          buttonNeutral: 'Ask Me Later',
-          buttonNegative: 'Cancel',
-          buttonPositive: 'OK',
-        }
-      );
-      return granted === PermissionsAndroid.RESULTS.GRANTED;
+      // Android 13+ (API 33+)
+      if (Platform.Version >= 33) {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } else {
+        // Android 12 and below
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      }
     } catch (err) {
-      console.warn(err);
+      console.warn('Permission request error:', err);
       return false;
     }
   };
@@ -379,8 +392,8 @@ export default function GenerateScreen() {
   const getAbsoluteImageUrl = (uri) => {
     if (!uri) return null;
 
-    // Already absolute
-    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+    // Already absolute or local
+    if (uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('file://')) {
       return uri;
     }
 
@@ -388,15 +401,125 @@ export default function GenerateScreen() {
     return `${API_BASE_URL}${uri}`;
   };
 
+  const processImageForExport = async (imageUrl) => {
+    if (!imageUrl) return null;
+
+    // If it's already a local file (likely already watermarked if needed), just return it
+    if (imageUrl.startsWith('file://')) {
+      return imageUrl;
+    }
+
+    try {
+      const filename = `wrapmycars_${Date.now()}.jpg`;
+      const tempPath = `${RNFS.CachesDirectoryPath}/${filename}`;
+      console.log('Processing image:', imageUrl, 'Temp path:', tempPath);
+
+      // 1. Download image to temp location
+      const download = await RNFS.downloadFile({
+        fromUrl: imageUrl,
+        toFile: tempPath,
+      }).promise;
+
+      if (download.statusCode !== 200) {
+        throw new Error('Failed to download image from server');
+      }
+
+      const fileExists = await RNFS.exists(tempPath);
+      if (!fileExists) {
+        throw new Error('Downloaded file not found at ' + tempPath);
+      }
+
+      // 2. Apply watermark if NOT SUBSCRIBED
+      if (!isSubscribed) {
+        console.log('Applying multi-pass watermark (Background + Image + Text)...');
+
+        // Pass 1: Add "Wrap my cars" with leading spaces and a background
+        const step1Path = await ImageMarker.markText({
+          backgroundImage: {
+            src: `file://${tempPath}`,
+            scale: 1,
+          },
+          watermarkTexts: [{
+            text: 'Wrap my cars', // Leading spaces for the logo
+            position: {
+              position: 'bottomRight',
+            },
+            style: {
+              color: '#FFFFFF',
+              fontSize: 32,
+              fontName: Platform.OS === 'android' ? 'sans-serif-medium' : 'Arial',
+              italic: true,
+              bold: true,
+              shadowStyle: {
+                dx: 0,
+                dy: 0,
+                radius: 12,
+                color: theme.colors.primary,
+              },
+              textBackgroundStyle: {
+                type: 'stretchX',
+                paddingX: 20,
+                paddingY: 12,
+                color: '#00000080',
+              }
+            }
+          }],
+          quality: 100,
+          saveFormat: 'jpg',
+        });
+
+        // Pass 2: Add the Image Logo using percentages (to ensure it sits before the text)
+        // Percentage works better across different image resolutions
+        const markedImagePath = await ImageMarker.markImage({
+          backgroundImage: {
+            src: step1Path.startsWith('file://') ? step1Path : `file://${step1Path}`,
+            scale: 1,
+          },
+          watermarkImages: [{
+            src: WatermarkAsset,
+            position: {
+              // We omit the 'position' string so X and Y (percentages) are used
+              X: '75%', // Approximate position to the left of the text in the bottom right corner
+              Y: '93%',
+            },
+            scale: 0.07,
+            alpha: 1,
+          }],
+          quality: 100,
+          saveFormat: 'jpg',
+        });
+
+        console.log('Final marked image result:', markedImagePath);
+        if (!markedImagePath) {
+          throw new Error('ImageMarker returned null or undefined in multi-pass');
+        }
+
+        return markedImagePath.startsWith('file://') ? markedImagePath : `file://${markedImagePath}`;
+      }
+
+      return `file://${tempPath}`;
+    } catch (err) {
+      console.error('Process Image Error Detail:', err);
+      throw err;
+    }
+  };
 
   const handleDownload = async () => {
     if (currentIndex < 0) return;
+
+    // Request permissions on Android
+    const hasPermission = await requestStoragePermission();
+    if (!hasPermission) {
+      showAlert({ type: 'error', title: 'Permission Denied', message: 'Please allow storage access to save images.' });
+      return;
+    }
 
     try {
       let imageUrl = getAbsoluteImageUrl(history[currentIndex].uri);
       const filename = `wrapmycars_${Date.now()}.jpg`;
 
-      if (Platform.OS === 'android') {
+      if (Platform.OS === 'android' && isSubscribed) {
+        // For SUBSCRIBED users on Android: Use System Download Manager for progress + notifications
         const { dirs } = ReactNativeBlobUtil.fs;
         ReactNativeBlobUtil.config({
           fileCache: true,
@@ -411,7 +534,6 @@ export default function GenerateScreen() {
         })
           .fetch('GET', imageUrl)
           .then((res) => {
-            console.log('File downloaded to: ', res.path());
             showAlert({ type: 'success', title: 'Success', message: 'Download started...' });
           })
           .catch((err) => {
@@ -419,17 +541,35 @@ export default function GenerateScreen() {
             showAlert({ type: 'error', title: 'Error', message: 'Download failed' });
           });
       } else {
-        // iOS
-        const { dirs } = ReactNativeBlobUtil.fs;
-        const localPath = `${dirs.CacheDir}/${filename}`;
+        // For iOS or Non-Subscribed Android (Watermarking needed)
+        const processedUri = await processImageForExport(imageUrl);
 
-        const res = await ReactNativeBlobUtil.config({
-          fileCache: true,
-          path: localPath,
-        }).fetch('GET', imageUrl);
+        // Save to Gallery/Photos using CameraRoll (Most reliable for visibility)
+        await CameraRoll.save(processedUri, { type: 'photo', album: 'WrapMyCars' });
 
-        await CameraRoll.save(`file://${res.path()}`, { type: 'photo' });
-        showAlert({ type: 'success', title: 'Success', message: 'Image saved to Photos!' });
+        if (Platform.OS === 'android') {
+          // Additional step for Android to show in Download tray if possible
+          try {
+            const { dirs } = ReactNativeBlobUtil.fs;
+            const destPath = `${dirs.DownloadDir}/${filename}`;
+            await RNFS.copyFile(processedUri.replace('file://', ''), destPath);
+            await ReactNativeBlobUtil.fs.scanFile([{ path: destPath, mime: 'image/jpeg' }]);
+
+            if (ReactNativeBlobUtil.android?.addCompleteDownload) {
+              await ReactNativeBlobUtil.android.addCompleteDownload({
+                title: filename,
+                description: 'Car modification generated by WrapMyCars',
+                mime: 'image/jpeg',
+                path: destPath,
+                showNotification: true,
+              });
+            }
+          } catch (e) {
+            console.log('Optional android gallery notification failed', e);
+          }
+        }
+
+        showAlert({ type: 'success', title: 'Success', message: 'Image saved to gallery!' });
       }
     } catch (error) {
       console.error('Download error:', error);
@@ -446,25 +586,8 @@ export default function GenerateScreen() {
     const imageUri = getAbsoluteImageUrl(history[currentIndex].uri);
 
     try {
-      let shareUri = imageUri;
-
-      // If it's a remote URL, download it first
-      if (imageUri.startsWith('http://') || imageUri.startsWith('https://')) {
-        const filename = `car_wrap_${Date.now()}.jpg`;
-        const downloadDest = `${RNFS.CachesDirectoryPath}/${filename}`;
-
-        // Download the image
-        const download = await RNFS.downloadFile({
-          fromUrl: imageUri,
-          toFile: downloadDest,
-        }).promise;
-
-        if (download.statusCode === 200) {
-          shareUri = `file://${downloadDest}`;
-        } else {
-          throw new Error('Download failed');
-        }
-      }
+      // Process image (download + watermark if needed)
+      const shareUri = await processImageForExport(imageUri);
 
       await RNShare.open({
         url: shareUri,
@@ -473,7 +596,7 @@ export default function GenerateScreen() {
         type: 'image/jpeg',
       });
     } catch (error) {
-      if (error.message !== 'User did not share') {
+      if (error.message !== 'User did not share' && error.message !== 'cancelled') {
         console.error('Share error:', error);
         showAlert({ type: 'error', title: 'Error', message: 'Failed to share image' });
       }
