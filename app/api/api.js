@@ -3,9 +3,6 @@ import axios from 'axios';
 import { getToken, removeToken } from '../utils/storage';
 
 // Set your backend base URL here.
-// During development, set to LAN IP like http://192.168.1.100:3000
-// For Android emulator use http://10.0.2.2:3000
-
 export const API_BASE_URL = __DEV__ ? 'http://192.168.1.3:3000/api' : 'https://api.wrapmycars.com/api'; // <-- replace
 
 const instance = axios.create({
