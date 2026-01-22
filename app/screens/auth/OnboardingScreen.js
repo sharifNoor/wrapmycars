@@ -81,11 +81,11 @@ const styles = StyleSheet.create({
     gradientOverlay: {
         flex: 1,
         justifyContent: 'flex-end',
-        paddingBottom: 50,
-        paddingHorizontal: 24,
     },
     content: {
         width: '100%',
+        paddingHorizontal: 24,
+        paddingBottom: 50,
     },
     textContainer: {
         marginBottom: 40,
