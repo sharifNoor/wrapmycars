@@ -22,9 +22,32 @@ class NotificationService {
 
             if (enabled) {
                 console.log('Authorization status:', authStatus);
-                await messaging().registerDeviceForRemoteMessages();
-                await this.getToken();
-                await this.subscribeToMarketing();
+                try {
+                    if (Platform.OS === 'ios') {
+                        console.log('Registering device for remote messages...');
+                        await messaging().registerDeviceForRemoteMessages();
+
+                        // Wait for APNS token with retries
+                        let apnsToken = await messaging().getAPNSToken();
+                        let retryCount = 0;
+                        while (!apnsToken && retryCount < 10) {
+                            console.log(`Waiting for APNS token... attempt ${retryCount + 1}`);
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            apnsToken = await messaging().getAPNSToken();
+                            retryCount++;
+                        }
+
+                        if (apnsToken) {
+                            console.log('APNS Token received:', apnsToken);
+                        } else {
+                            console.warn('APNS token still not available after 10 seconds.');
+                        }
+                    }
+                    await this.getToken();
+                    await this.subscribeToMarketing();
+                } catch (error) {
+                    console.log('Error during iOS registration/subscription:', error);
+                }
             }
         }
     }
