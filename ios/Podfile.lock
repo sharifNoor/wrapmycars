@@ -3370,6 +3370,7 @@ DEPENDENCIES:
   - FirebaseCore
   - FirebaseCoreExtension
   - FirebaseInstallations
+  - FirebaseMessaging
   - fmt (from `../node_modules/react-native/third-party-podspecs/fmt.podspec`)
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - GoogleDataTransport
@@ -3829,6 +3830,6 @@ SPEC CHECKSUMS:
   StripeUICore: 30f8352fd7a5cf1541b7777a57b3ad1133bf6763
   Yoga: 6ca93c8c13f56baeec55eb608577619b17a4d64e
 
-PODFILE CHECKSUM: 6208f0f3d06183d2250cdc130fa8fd36773d24b3
+PODFILE CHECKSUM: 0529007029664178326941b45ad38a35e6bfb1d0
 
 COCOAPODS: 1.16.2
