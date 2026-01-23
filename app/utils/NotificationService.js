@@ -9,6 +9,7 @@ class NotificationService {
             );
             if (granted === PermissionsAndroid.RESULTS.GRANTED) {
                 console.log('Notification permission granted');
+                await messaging.registerDeviceForRemoteMessages();
                 await this.getToken();
                 await this.subscribeToMarketing();
             } else {

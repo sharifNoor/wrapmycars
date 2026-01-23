@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>509902062436-61okv6e5r8n0jbqbfcim95ukkq6rgiaq.apps.googleusercontent.com</string>
+	<string>509902062436-pbkf1ovcm7c6kd3fuc11ghi762lbsnvm.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.509902062436-61okv6e5r8n0jbqbfcim95ukkq6rgiaq</string>
+	<string>com.googleusercontent.apps.509902062436-pbkf1ovcm7c6kd3fuc11ghi762lbsnvm</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>509902062436-8o7qshe63tblhhstt6enkjvvh9eudc6l.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,7 +15,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.cryptofogs.wrapmycars</string>
+	<string>com.cryptofogsllc.wrapmycars</string>
 	<key>PROJECT_ID</key>
 	<string>wrapmycars-eaf35</string>
 	<key>STORAGE_BUCKET</key>
@@ -31,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:509902062436:ios:02598b7175a1ecc6a1f071</string>
+	<string>1:509902062436:ios:359008ec84fd2987a1f071</string>
 </dict>
 </plist>
