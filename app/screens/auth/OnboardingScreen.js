@@ -133,7 +133,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#fff',
         borderRadius: 30,
-        marginBottom: 8,
     },
     googleBtnText: {
         color: '#000',

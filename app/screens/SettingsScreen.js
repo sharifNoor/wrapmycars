@@ -137,7 +137,7 @@ export default function SettingsScreen({ navigation }) {
           </RenderSection>
 
           {/* Preferences Section */}
-          <RenderSection title="Preferences">
+          {/* <RenderSection title="Preferences">
             <RenderRow
               icon="notifications-outline"
               label="Email Notifications"
@@ -151,7 +151,7 @@ export default function SettingsScreen({ navigation }) {
                 />
               }
             />
-          </RenderSection>
+          </RenderSection> */}
 
           {/* Billing Section */}
           <RenderSection title="Billing">

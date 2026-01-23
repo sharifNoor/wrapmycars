@@ -139,51 +139,53 @@ const CustomAlert = ({ id, title, message, type, buttons, onClose }) => {
                         colors={['#1a1a2e03', '#0f0c29']}
                         style={styles.alertCard}
                     >
-                        {/* Icon */}
-                        <View style={styles.iconContainer}>
-                            <Ionicons name={icon.name} size={56} color={icon.color} />
-                        </View>
+                        <View style={{ padding: 28, alignItems: 'center' }}>
+                            {/* Icon */}
+                            <View style={styles.iconContainer}>
+                                <Ionicons name={icon.name} size={56} color={icon.color} />
+                            </View>
 
-                        {/* Title */}
-                        {title && <Text style={styles.title}>{title}</Text>}
+                            {/* Title */}
+                            {title && <Text style={styles.title}>{title}</Text>}
 
-                        {/* Message */}
-                        {message && <Text style={styles.message}>{message}</Text>}
+                            {/* Message */}
+                            {message && <Text style={styles.message}>{message}</Text>}
 
-                        {/* Buttons */}
-                        <View style={styles.buttonContainer}>
-                            {buttons.map((button, index) => (
-                                <TouchableOpacity
-                                    key={index}
-                                    onPress={() => {
-                                        handleClose();
-                                        if (button.onPress) button.onPress();
-                                    }}
-                                    style={[
-                                        styles.button,
-                                        buttons.length === 1 && styles.buttonSingle,
-                                        button.style === 'cancel' && styles.buttonCancel,
-                                    ]}
-                                >
-                                    <LinearGradient
-                                        colors={
-                                            button.style === 'cancel'
-                                                ? ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']
-                                                : theme.gradients.sunset
-                                        }
-                                        style={styles.buttonGradient}
+                            {/* Buttons */}
+                            <View style={styles.buttonContainer}>
+                                {buttons.map((button, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        onPress={() => {
+                                            handleClose();
+                                            if (button.onPress) button.onPress();
+                                        }}
+                                        style={[
+                                            styles.button,
+                                            buttons.length === 1 && styles.buttonSingle,
+                                            button.style === 'cancel' && styles.buttonCancel,
+                                        ]}
                                     >
-                                        <Text
-                                            style={[
-                                                styles.buttonText,
-                                                button.style === 'cancel' && styles.buttonTextCancel,
-                                            ]}
+                                        <LinearGradient
+                                            colors={
+                                                button.style === 'cancel'
+                                                    ? ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']
+                                                    : theme.gradients.sunset
+                                            }
+                                            style={styles.buttonGradient}
                                         >
-                                            {button.text}
-                                        </Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            ))}
+                                            <Text
+                                                style={[
+                                                    styles.buttonText,
+                                                    button.style === 'cancel' && styles.buttonTextCancel,
+                                                ]}
+                                            >
+                                                {button.text}
+                                            </Text>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
                     </LinearGradient>
                 </Animated.View>
@@ -204,10 +206,8 @@ const styles = StyleSheet.create({
     },
     alertCard: {
         borderRadius: 24,
-        padding: 28,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.2)',
-        alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.5,
@@ -249,8 +249,6 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     buttonGradient: {
-        paddingVertical: 14,
-        paddingHorizontal: 20,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -258,6 +256,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#fff',
+        paddingVertical: 14,
+        paddingHorizontal: 20,
     },
     buttonTextCancel: {
         color: theme.colors.textDim,

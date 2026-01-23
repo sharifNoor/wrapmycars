@@ -35,12 +35,11 @@ export default function Button({
 }
 const styles = StyleSheet.create({
   btn: {
-    paddingVertical: 14,
-    paddingHorizontal: 18,
     borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    height: 56,
 
     // soft shadow (iOS)
     shadowColor: '#000',

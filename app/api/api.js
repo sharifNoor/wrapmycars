@@ -3,7 +3,8 @@ import axios from 'axios';
 import { getToken, removeToken } from '../utils/storage';
 
 // Set your backend base URL here.
-export const API_BASE_URL = __DEV__ ? 'http://192.168.1.3:3000/api' : 'https://api.wrapmycars.com/api'; // <-- replace
+// export const API_BASE_URL = __DEV__ ? 'http://192.168.1.3:3000/api' : 'https://api.wrapmycars.com/api'; // <-- replace
+export const API_BASE_URL = __DEV__ ? 'https://api.wrapmycars.com/api' : 'https://api.wrapmycars.com/api'; // <-- replace
 
 const instance = axios.create({
   baseURL: API_BASE_URL,

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, RefreshControl, Sta
 import { useFocusEffect } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AuthContext } from '../contexts/AuthContext';
 import CreditBadge from '../components/CreditBadge';
@@ -16,6 +16,7 @@ export default function HomeScreen({ navigation }) {
   const [featuredImages, setFeaturedImages] = useState([]);
 
   const insets = useSafeAreaInsets();
+  const safePaddingBottom = Math.max(insets.bottom, 20);
 
   const fetchFeaturedImages = async () => {
     try {
@@ -74,55 +75,56 @@ export default function HomeScreen({ navigation }) {
       style={styles.container}
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <SafeAreaView>
+        {/* Top Bar */}
+        <View style={[styles.topBar, { paddingTop: 10 }]}>
+          <View style={styles.logoContainer}>
+            <Ionicons name="car-sport" size={24} color="#D4ACFB" />
+            <Text style={styles.appName}>Wrap My Cars</Text>
+          </View>
 
-      {/* Top Bar */}
-      <View style={[styles.topBar, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.logoContainer}>
-          <Ionicons name="car-sport" size={24} color="#D4ACFB" />
-          <Text style={styles.appName}>Wrap My Cars</Text>
+          <View style={styles.rightCol}>
+            <CreditBadge credits={credits} />
+            <TouchableOpacity
+              style={styles.settingsBtn}
+              onPress={() => navigation.navigate('Settings')}
+            >
+              <Ionicons name="options" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.rightCol}>
-          <CreditBadge credits={credits} />
-          <TouchableOpacity
-            style={styles.settingsBtn}
-            onPress={() => navigation.navigate('Settings')}
-          >
-            <Ionicons name="options" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
+        {/* Main Feed */}
+        <FlatList
+          data={featuredImages}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          ListHeaderComponent={renderHeader}
+          // contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120, paddingTop: 10 }}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#A742EA"
+              colors={['#A742EA', '#fff']}
+              progressBackgroundColor="#1a1a1a"
+            />
+          }
+          ListEmptyComponent={
+            !refreshing && (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="images-outline" size={48} color="rgba(255,255,255,0.3)" />
+                <Text style={styles.emptyText}>No featured transformations yet.</Text>
+              </View>
+            )
+          }
+        />
 
-      {/* Main Feed */}
-      <FlatList
-        data={featuredImages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
-        // contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120, paddingTop: 10 }}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#A742EA"
-            colors={['#A742EA', '#fff']}
-            progressBackgroundColor="#1a1a1a"
-          />
-        }
-        ListEmptyComponent={
-          !refreshing && (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="images-outline" size={48} color="rgba(255,255,255,0.3)" />
-              <Text style={styles.emptyText}>No featured transformations yet.</Text>
-            </View>
-          )
-        }
-      />
-
+      </SafeAreaView>
       {/* Floating Action Button for Create */}
-      <View style={styles.fabContainer}>
+      <View style={[styles.fabContainer, { bottom: safePaddingBottom + 10 }]}>
         <TouchableOpacity
           style={styles.fab}
           onPress={() => navigation.navigate('Generate')}
@@ -138,7 +140,6 @@ export default function HomeScreen({ navigation }) {
           </LinearGradient>
         </TouchableOpacity>
       </View>
-
     </LinearGradient>
   );
 }
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
   rightCol: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12
+    gap: 12,
   },
   settingsBtn: {
     padding: 10,
@@ -203,7 +204,6 @@ const styles = StyleSheet.create({
   // FAB
   fabContainer: {
     position: 'absolute',
-    bottom: 30,
     width: '100%',
     alignItems: 'center',
     pointerEvents: 'box-none', // Let clicks pass through if not on button

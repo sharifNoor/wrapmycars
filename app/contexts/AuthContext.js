@@ -113,6 +113,11 @@ export const AuthProvider = ({ children }) => {
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
 
+      // Handle explicit cancellation (newer library versions may return this object)
+      if (userInfo.type === 'cancelled') {
+        return false;
+      }
+
       // Try different possible locations for the ID token
       const idToken = userInfo.idToken || userInfo.data?.idToken || userInfo?.user?.idToken;
 

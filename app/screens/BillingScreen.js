@@ -255,11 +255,13 @@ export default function BillingScreen({ navigation }) {
             colors={['rgba(167, 66, 234, 0.15)', 'rgba(167, 66, 234, 0.05)']}
             style={styles.proTipContainer}
           >
-            <View style={styles.proTipHeader}>
-              <Ionicons name="star" size={16} color={theme.colors.primary} />
-              <Text style={styles.proTipTitle}>PRO TIP</Text>
+            <View style={{ padding: 12, }}>
+              <View style={styles.proTipHeader}>
+                <Ionicons name="star" size={16} color={theme.colors.primary} />
+                <Text style={styles.proTipTitle}>PRO TIP</Text>
+              </View>
+              <Text style={styles.proTipText}>Subscribers get <Text style={{ fontWeight: '700', color: '#fff' }}>NO WATERMARKS</Text> and monthly credits. Keep your designs clean!</Text>
             </View>
-            <Text style={styles.proTipText}>Subscribers get <Text style={{ fontWeight: '700', color: '#fff' }}>NO WATERMARKS</Text> and monthly credits. Keep your designs clean!</Text>
           </LinearGradient>
 
           {/* Monthly Subscriptions */}
@@ -362,7 +364,6 @@ const styles = StyleSheet.create({
   // Pro Tip (Moved Up)
   proTipContainer: {
     borderRadius: 12,
-    padding: 12,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: 'rgba(167, 66, 234, 0.3)',

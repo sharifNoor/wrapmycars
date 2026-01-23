@@ -1184,7 +1184,7 @@ const styles = StyleSheet.create({
 
   // Enhanced Empty State Styles
   emptyStateContent: { padding: 20 },
-  heroSection: { alignItems: 'center', marginVertical: 32 },
+  heroSection: { alignItems: 'center', marginBottom: 32 },
   heroTitle: { fontSize: 32, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 8 },
   heroSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.6)', textAlign: 'center' },
 
@@ -1192,7 +1192,7 @@ const styles = StyleSheet.create({
   uploadCard: {
     height: 160,
     borderRadius: 24,
-    padding: 20,
+    // padding: 20,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -1234,9 +1234,8 @@ const styles = StyleSheet.create({
   exampleOverlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
-    padding: 12,
   },
-  exampleLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  exampleLabel: { color: '#fff', padding: 12, fontSize: 14, fontWeight: '600' },
 
   customInput: {
     backgroundColor: 'rgba(255,255,255,0.05)',
