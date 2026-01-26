@@ -38,14 +38,14 @@ export default function ContactScreen({ navigation }) {
                         <Ionicons name="chevron-forward" size={24} color={theme.colors.textDim} />
                     </TouchableOpacity>
 
-                    <View style={styles.socialSection}>
+                    {/* <View style={styles.socialSection}>
                         <Text style={styles.socialTitle}>Follow us</Text>
                         <View style={styles.socialRow}>
                             <Ionicons name="logo-instagram" size={32} color="#fff" style={styles.socialIcon} />
                             <Ionicons name="logo-twitter" size={32} color="#fff" style={styles.socialIcon} />
                             <Ionicons name="logo-facebook" size={32} color="#fff" style={styles.socialIcon} />
                         </View>
-                    </View>
+                    </View> */}
                 </ScrollView>
             </SafeAreaView>
         </LinearGradient>
