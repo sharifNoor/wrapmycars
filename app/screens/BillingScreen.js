@@ -63,11 +63,16 @@ export default function BillingScreen({ navigation }) {
         customerEphemeralKeySecret: ephemeralKey,
         paymentIntentClientSecret: paymentIntent,
         // Apple Pay / Google Pay defaults enabled
+        returnURL: 'wrapmycars',
+        applePay: {
+          merchantId: 'merchant.com.wrapmycars',
+          merchantCountryCode: 'US',
+        },
         userInterfaceStyle: 'dark',
         appearance: {
           colors: {
             primary: theme.colors.primary,
-            background: '#1c1c1c', // Stripe specific, keep dark
+            background: '#645151', // Stripe specific, keep dark
             componentBackground: '#2c2c2c',
             // componentBorder: theme.colors.border,
             componentDivider: '#555555',
