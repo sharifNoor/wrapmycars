@@ -170,7 +170,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   settingsBtn: {
-    padding: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 14,
     borderWidth: 1,

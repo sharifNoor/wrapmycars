@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
   },
   txt: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 21,
+    fontWeight: '500',
   },
 });
 

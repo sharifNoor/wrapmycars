@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 18,
+    minHeight: 24,
     borderRadius: 20,
     gap: 6,
     shadowColor: '#FFA500',

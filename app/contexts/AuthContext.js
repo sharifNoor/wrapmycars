@@ -170,7 +170,6 @@ export const AuthProvider = ({ children }) => {
       if (!identityToken) {
         throw new Error('Apple Sign-In failed - no identityToken returned');
       }
-
       // Send to YOUR backend
       const res = await api.post('/auth/google', {
         token: identityToken,
