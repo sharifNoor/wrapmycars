@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { AppleButton } from '@invertase/react-native-apple-authentication';
 import api from '../../api/api';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
@@ -23,7 +24,7 @@ export default function LoginScreen({ navigation }) {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const { login, googleLogin } = useContext(AuthContext);
+    const { login, googleLogin, appleLogin } = useContext(AuthContext);
     const { showAlert } = useAlert();
 
     const handleLogin = async () => {
@@ -118,6 +119,15 @@ export default function LoginScreen({ navigation }) {
                             <Text style={styles.googleBtnText}>Continue with Google</Text>
                         </TouchableOpacity>
 
+                        {Platform.OS === 'ios' && (
+                            <AppleButton
+                                buttonStyle={AppleButton.Style.WHITE}
+                                buttonType={AppleButton.Type.CONTINUE}
+                                style={styles.appleBtn}
+                                onPress={appleLogin}
+                            />
+                        )}
+
                         {/* LINK */}
                         <TouchableOpacity
                             onPress={() => navigation.navigate('Register')}
@@ -203,5 +213,11 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    appleBtn: {
+        width: '100%',
+        height: 50,
+        marginTop: 16,
+        borderRadius: 30, // Note: Apple button might have its own radius behavior, but we define style here
     },
 });

@@ -6,6 +6,7 @@ import { useAlert } from './AlertContext';
 import { analyticsService } from '../utils/AnalyticsService';
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { appleAuth } from '@invertase/react-native-apple-authentication';
 
 export const AuthContext = createContext();
 
@@ -155,6 +156,47 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const appleLogin = async () => {
+    try {
+      // Start the Sign In process
+      const appleAuthRequestResponse = await appleAuth.performRequest({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+      });
+
+      // Get fulfillment state from the response
+      const { identityToken, user: appleUserId } = appleAuthRequestResponse;
+
+      if (!identityToken) {
+        throw new Error('Apple Sign-In failed - no identityToken returned');
+      }
+
+      // Send to YOUR backend
+      const res = await api.post('/auth/apple', {
+        token: identityToken,
+        user: appleUserId, // apple user id
+      });
+
+      const { token: jwt, user: userData } = res.data;
+      await analyticsService.logLogin('apple');
+      await login({ token: jwt, user: userData });
+      return true;
+
+    } catch (error) {
+      if (error.code === appleAuth.Error.CANCELED) {
+        console.log('User canceled Apple Sign-In');
+      } else {
+        console.error('Apple Sign-In Error:', error);
+        showAlert({
+          type: 'error',
+          title: 'Error',
+          message: 'Apple Sign-In failed',
+        });
+      }
+      return false;
+    }
+  };
+
   // Expose helper for Stripe & generator to update credits
   const updateCredits = async () => {
     await fetchCredits();
@@ -185,6 +227,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateCredits,
         googleLogin,
+        appleLogin,
       }}
     >
       {children}
