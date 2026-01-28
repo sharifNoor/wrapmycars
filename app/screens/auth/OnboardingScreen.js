@@ -62,6 +62,8 @@ export default function OnboardingScreen({ navigation }) {
                                 <Text style={styles.googleBtnText}>Continue with Google</Text>
                             </TouchableOpacity>
 
+                            <View style={styles.spacer} />
+
                             {Platform.OS === 'ios' && (
                                 <View style={styles.appleBtnContainer}>
                                     <AppleButton
