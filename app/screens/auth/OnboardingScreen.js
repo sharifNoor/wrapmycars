@@ -56,13 +56,15 @@ export default function OnboardingScreen({ navigation }) {
                             </TouchableOpacity>
 
                             {Platform.OS === 'ios' && (
-                                <AppleButton
-                                    buttonStyle={AppleButton.Style.WHITE}
-                                    buttonType={AppleButton.Type.CONTINUE}
-                                    cornerRadius={30}
-                                    style={styles.appleBtn}
-                                    onPress={appleLogin}
-                                />
+                                <View style={styles.appleBtnContainer}>
+                                    <AppleButton
+                                        buttonStyle={AppleButton.Style.WHITE}
+                                        buttonType={AppleButton.Type.CONTINUE}
+                                        cornerRadius={30}
+                                        style={styles.appleBtn}
+                                        onPress={appleLogin}
+                                    />
+                                </View>
                             )}
 
                             {/* Secondary Action */}
@@ -150,6 +152,10 @@ const styles = StyleSheet.create({
         color: '#000',
         fontSize: 16,
         fontWeight: '600',
+    },
+    appleBtnContainer: {
+        width: '100%',
+        height: 56,
     },
     appleBtn: {
         width: '100%',
