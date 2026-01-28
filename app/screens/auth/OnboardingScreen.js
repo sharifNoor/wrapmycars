@@ -26,7 +26,12 @@ export default function OnboardingScreen({ navigation }) {
                     locations={[0.2, 0.9]}
                     style={styles.gradientOverlay}
                 >
-                    <View style={styles.content}>
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        bounces={false}
+                        showsVerticalScrollIndicator={false}
+                    >
                         <View style={styles.textContainer}>
                             <Text style={styles.title}>
                                 Transform Your Car with <Text style={styles.highlight}>AI</Text>
@@ -45,6 +50,8 @@ export default function OnboardingScreen({ navigation }) {
                                 gradientColors={theme.gradients.sunset}
                             />
 
+                            <View style={styles.spacer} />
+
                             <TouchableOpacity
                                 onPress={() => googleLogin().then(success => {
                                     if (success) console.log("Google Login Success");
@@ -61,11 +68,13 @@ export default function OnboardingScreen({ navigation }) {
                                         buttonStyle={AppleButton.Style.WHITE}
                                         buttonType={AppleButton.Type.CONTINUE}
                                         cornerRadius={30}
-                                        style={styles.appleBtn}
+                                        style={StyleSheet.absoluteFillObject}
                                         onPress={appleLogin}
                                     />
                                 </View>
                             )}
+
+                            <View style={styles.spacer} />
 
                             {/* Secondary Action */}
                             <TouchableOpacity
@@ -75,10 +84,11 @@ export default function OnboardingScreen({ navigation }) {
                                 <Text style={styles.secondaryBtnText}>I already have an account</Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
-                </LinearGradient>
-            </ImageBackground>
-        </View>
+                    </ScrollView>
+                </View>
+            </LinearGradient>
+        </ImageBackground>
+        </View >
     );
 }
 
@@ -90,7 +100,7 @@ const styles = StyleSheet.create({
     background: {
         flex: 1,
         width: width,
-        height: height / 1.5,
+        height: height, // Full height
     },
     gradientOverlay: {
         flex: 1,
@@ -98,8 +108,16 @@ const styles = StyleSheet.create({
     },
     content: {
         width: '100%',
+        maxHeight: height * 0.8, // Limit height to bottom 80%
+    },
+    scrollView: {
+        width: '100%',
+    },
+    scrollContent: {
         paddingHorizontal: 24,
         paddingBottom: 50,
+        justifyContent: 'flex-end',
+        flexGrow: 1,
     },
     textContainer: {
         marginBottom: 40,
@@ -122,7 +140,10 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     buttonsContainer: {
-        gap: 16,
+        width: '100%',
+    },
+    spacer: {
+        height: 16,
     },
     mainBtn: {
         width: '100%',
@@ -156,10 +177,8 @@ const styles = StyleSheet.create({
     appleBtnContainer: {
         width: '100%',
         height: 56,
-    },
-    appleBtn: {
-        width: '100%',
-        height: 56,
+        marginVertical: 0,
+        position: 'relative',
     },
     secondaryBtnText: {
         color: '#fff',
