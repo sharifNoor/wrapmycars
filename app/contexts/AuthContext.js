@@ -172,9 +172,9 @@ export const AuthProvider = ({ children }) => {
       }
 
       // Send to YOUR backend
-      const res = await api.post('/auth/apple', {
+      const res = await api.post('/auth/google', {
         token: identityToken,
-        user: appleUserId, // apple user id
+        // user: appleUserId, // apple user id
       });
 
       const { token: jwt, user: userData } = res.data;
