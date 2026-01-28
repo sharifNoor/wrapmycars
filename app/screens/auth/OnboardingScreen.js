@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, StatusBar, ScrollView } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { AppleButton } from '@invertase/react-native-apple-authentication';
@@ -85,10 +85,9 @@ export default function OnboardingScreen({ navigation }) {
                             </TouchableOpacity>
                         </View>
                     </ScrollView>
-                </View>
-            </LinearGradient>
-        </ImageBackground>
-        </View >
+                </LinearGradient>
+            </ImageBackground>
+        </View>
     );
 }
 
