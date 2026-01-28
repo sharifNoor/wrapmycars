@@ -2,6 +2,8 @@ import React, { useContext } from 'react';
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, StatusBar } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { AppleButton } from '@invertase/react-native-apple-authentication';
+import { Platform } from 'react-native';
 import { theme } from '../../constants/theme';
 import Button from '../../components/Button';
 import { AuthContext } from '../../contexts/AuthContext';
@@ -12,7 +14,7 @@ const { width, height } = Dimensions.get('window');
 const BG_IMAGE = require('../../assets/onboarding.png');
 
 export default function OnboardingScreen({ navigation }) {
-    const { googleLogin } = useContext(AuthContext);
+    const { googleLogin, appleLogin } = useContext(AuthContext);
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
@@ -52,6 +54,16 @@ export default function OnboardingScreen({ navigation }) {
                                 <Ionicons name="logo-google" size={20} color="#000" style={{ marginRight: 8 }} />
                                 <Text style={styles.googleBtnText}>Continue with Google</Text>
                             </TouchableOpacity>
+
+                            {Platform.OS === 'ios' && (
+                                <AppleButton
+                                    buttonStyle={AppleButton.Style.WHITE}
+                                    buttonType={AppleButton.Type.CONTINUE}
+                                    cornerRadius={30}
+                                    style={styles.appleBtn}
+                                    onPress={appleLogin}
+                                />
+                            )}
 
                             {/* Secondary Action */}
                             <TouchableOpacity
@@ -138,6 +150,10 @@ const styles = StyleSheet.create({
         color: '#000',
         fontSize: 16,
         fontWeight: '600',
+    },
+    appleBtn: {
+        width: '100%',
+        height: 56,
     },
     secondaryBtnText: {
         color: '#fff',

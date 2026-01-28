@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { AppleButton } from '@invertase/react-native-apple-authentication';
 import api from '../../api/api';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useAlert } from '../../contexts/AlertContext';
@@ -26,7 +27,7 @@ export default function RegisterScreen({ navigation }) {
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const { login, googleLogin } = useContext(AuthContext);
+    const { login, googleLogin, appleLogin } = useContext(AuthContext);
     const { showAlert } = useAlert();
 
     const handleRegister = async () => {
@@ -124,6 +125,16 @@ export default function RegisterScreen({ navigation }) {
                             <Text style={styles.googleBtnText}>Continue with Google</Text>
                         </TouchableOpacity>
 
+                        {Platform.OS === 'ios' && (
+                            <AppleButton
+                                buttonStyle={AppleButton.Style.WHITE}
+                                buttonType={AppleButton.Type.CONTINUE}
+                                cornerRadius={30}
+                                style={styles.appleBtn}
+                                onPress={appleLogin}
+                            />
+                        )}
+
                         {/* Back to Login */}
                         <TouchableOpacity
                             onPress={() => navigation.goBack()}
@@ -209,5 +220,10 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    appleBtn: {
+        width: '100%',
+        height: 50,
+        marginTop: 16,
     },
 });

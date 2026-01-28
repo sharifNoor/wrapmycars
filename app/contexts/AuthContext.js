@@ -183,7 +183,12 @@ export const AuthProvider = ({ children }) => {
       return true;
 
     } catch (error) {
-      if (error.code === appleAuth.Error.CANCELED) {
+      // Handle explicit cancellation
+      if (
+        error.code === appleAuth.Error.CANCELED ||
+        error.message?.includes('canceled') ||
+        error.message?.includes('1001')
+      ) {
         console.log('User canceled Apple Sign-In');
       } else {
         console.error('Apple Sign-In Error:', error);

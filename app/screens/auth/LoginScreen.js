@@ -123,6 +123,7 @@ export default function LoginScreen({ navigation }) {
                             <AppleButton
                                 buttonStyle={AppleButton.Style.WHITE}
                                 buttonType={AppleButton.Type.CONTINUE}
+                                cornerRadius={30}
                                 style={styles.appleBtn}
                                 onPress={appleLogin}
                             />
