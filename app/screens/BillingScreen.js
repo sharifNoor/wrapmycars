@@ -24,6 +24,20 @@ export default function BillingScreen({ navigation }) {
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
   const [iapProducts, setIapProducts] = useState([]);
 
+  /**
+   * Guess Apple SKU if not provided by backend metadata
+   */
+  const guessAppleProductId = (pkg) => {
+    if (pkg.apple_product_id) return pkg.apple_product_id;
+
+    const base = 'com.wrapmycars';
+    if (pkg.type === 'recurring') {
+      if (pkg.credits > 100) return `${base}.pro_monthly_max`;
+      return `${base}.pro_monthly`;
+    }
+    return `${base}.credits${pkg.credits}_v2`;
+  };
+
   useEffect(() => {
     fetchPackages();
     analyticsService.logViewItem('store_screen');
@@ -49,8 +63,10 @@ export default function BillingScreen({ navigation }) {
       // Merge Apple data into packages if on iOS
       setPackages(prev => {
         return prev.map(pkg => {
+          const guessedSku = guessAppleProductId(pkg);
           const appleProd = allIapProducts.find(ap =>
             ap.productId === pkg.apple_product_id ||
+            ap.productId === guessedSku ||
             (pkg.type === 'recurring' && ap.productId.includes('pro')) ||
             (pkg.credits && ap.productId.includes(pkg.credits))
           );
@@ -79,11 +95,10 @@ export default function BillingScreen({ navigation }) {
       setPackages(res.data);
 
       if (Platform.OS === 'ios') {
-        const skus = res.data.map(p => p.apple_product_id).filter(id => id);
+        // Collect all SKUs (metadata or guessed)
+        const skus = res.data.map(p => guessAppleProductId(p)).filter(id => id);
 
-        if (skus.length === 0) {
-          console.warn('⚠️ No Apple Product IDs found in backend packages. Ensure you have added "apple_product_id" metadata to your Stripe products.');
-        } else {
+        if (skus.length > 0) {
           initIAP(skus);
         }
       }
@@ -260,9 +275,15 @@ export default function BillingScreen({ navigation }) {
   };
 
   const renderPackage = (pkg) => {
-    const isPackActive = pkg.type === 'recurring' && isSubscribed && currentPlanId && pkg.price_id?.toString().trim() === currentPlanId?.toString().trim();
+    // Check if active (can be Stripe Price ID or Apple Product ID)
+    const isPackActive = pkg.type === 'recurring' && isSubscribed && currentPlanId && (
+      pkg.price_id?.toString() === currentPlanId?.toString() ||
+      pkg.appleProductId?.toString() === currentPlanId?.toString() ||
+      guessAppleProductId(pkg) === currentPlanId?.toString()
+    );
+
     if (pkg.type === 'recurring') {
-      console.log(`Package: ${pkg.name} | PKG_ID: ${pkg.price_id} | USER_PLAN: ${currentPlanId} | MATCH: ${isPackActive}`);
+      console.log(`Package: ${pkg.name} | PKG_ID: ${pkg.price_id} | APPLE_ID: ${pkg.appleProductId} | USER_PLAN: ${currentPlanId} | MATCH: ${isPackActive}`);
     }
     return (
       <TouchableOpacity
