@@ -24,24 +24,9 @@ export default function BillingScreen({ navigation }) {
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
   const [iapProducts, setIapProducts] = useState([]);
 
-  // Product IDs for Apple IAP
-  const iapSkus = Platform.select({
-    ios: [
-      'com.wrapmycars.credits50',
-      'com.wrapmycars.credits150',
-      'com.wrapmycars.credits500',
-      'com.wrapmycars.pro_monthly'
-    ],
-    default: []
-  });
-
   useEffect(() => {
     fetchPackages();
     analyticsService.logViewItem('store_screen');
-
-    if (Platform.OS === 'ios') {
-      initIAP();
-    }
 
     return () => {
       if (Platform.OS === 'ios') {
@@ -50,12 +35,37 @@ export default function BillingScreen({ navigation }) {
     };
   }, []);
 
-  const initIAP = async () => {
+  const initIAP = async (skus) => {
+    if (!skus || skus.length === 0) return;
     try {
       await RNIap.initConnection();
-      const products = await RNIap.getProducts({ skus: iapSkus });
-      console.log('IAP Products:', products);
-      setIapProducts(products);
+      const products = await RNIap.getProducts({ skus });
+      const subs = await RNIap.getSubscriptions({ skus });
+
+      const allIapProducts = [...products, ...subs];
+      console.log('IAP Products fetched from Apple:', allIapProducts);
+      setIapProducts(allIapProducts);
+
+      // Merge Apple data into packages if on iOS
+      setPackages(prev => {
+        return prev.map(pkg => {
+          const appleProd = allIapProducts.find(ap =>
+            ap.productId === pkg.apple_product_id ||
+            (pkg.type === 'recurring' && ap.productId.includes('pro')) ||
+            (pkg.credits && ap.productId.includes(pkg.credits))
+          );
+
+          if (appleProd) {
+            return {
+              ...pkg,
+              name: appleProd.title || pkg.name,
+              amount: appleProd.localizedPrice || pkg.amount,
+              appleProductId: appleProd.productId
+            };
+          }
+          return pkg;
+        });
+      });
     } catch (err) {
       console.warn('IAP Init Error:', err);
     }
@@ -67,6 +77,16 @@ export default function BillingScreen({ navigation }) {
       const res = await api.get('/billing/packages');
       console.log('Packages response:', JSON.stringify(res.data));
       setPackages(res.data);
+
+      if (Platform.OS === 'ios') {
+        const skus = res.data.map(p => p.apple_product_id).filter(id => id);
+
+        if (skus.length === 0) {
+          console.warn('⚠️ No Apple Product IDs found in backend packages. Ensure you have added "apple_product_id" metadata to your Stripe products.');
+        } else {
+          initIAP(skus);
+        }
+      }
     } catch (err) {
       console.error('Fetch Packages Error:', err);
       showAlert({ type: 'error', title: 'Error', message: 'Failed to fetch packages' });
@@ -84,13 +104,19 @@ export default function BillingScreen({ navigation }) {
       try {
         await analyticsService.logBeginCheckout(pkg.amount, pkg.name);
 
-        // Find matching IAP product
-        const sku = iapSkus.find(s => s.includes(pkg.credits) || (pkg.type === 'recurring' && s.includes('pro')));
-        if (!sku) {
-          showAlert({ type: 'error', title: 'Error', message: 'Payment option not available for iOS yet.' });
+        // Find matching IAP product from Apple
+        const appleProduct = iapProducts.find(ap =>
+          ap.productId === pkg.appleProductId ||
+          ap.productId.includes(pkg.credits) ||
+          (pkg.type === 'recurring' && ap.productId.includes('pro'))
+        );
+
+        if (!appleProduct) {
+          showAlert({ type: 'error', title: 'Error', message: 'This package is not configured in the App Store yet.' });
           return;
         }
 
+        const sku = appleProduct.productId;
         const purchase = await RNIap.requestPurchase({ sku });
         console.log('Purchase successful:', purchase);
 
