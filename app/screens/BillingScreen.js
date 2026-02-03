@@ -8,6 +8,8 @@ import { useAlert } from '../contexts/AlertContext';
 import api from '../api/api';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useStripe } from '@stripe/stripe-react-native';
+import * as RNIap from 'react-native-iap';
+import { Platform } from 'react-native';
 
 import { theme } from '../constants/theme';
 import { analyticsService } from '../utils/AnalyticsService';
@@ -20,11 +22,44 @@ export default function BillingScreen({ navigation }) {
   const [packages, setPackages] = useState([]);
   const [fetchingPackages, setFetchingPackages] = useState(true);
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
+  const [iapProducts, setIapProducts] = useState([]);
+
+  // Product IDs for Apple IAP
+  const iapSkus = Platform.select({
+    ios: [
+      'com.wrapmycars.credits50',
+      'com.wrapmycars.credits150',
+      'com.wrapmycars.credits500',
+      'com.wrapmycars.pro_monthly'
+    ],
+    default: []
+  });
 
   useEffect(() => {
     fetchPackages();
     analyticsService.logViewItem('store_screen');
+
+    if (Platform.OS === 'ios') {
+      initIAP();
+    }
+
+    return () => {
+      if (Platform.OS === 'ios') {
+        RNIap.endConnection();
+      }
+    };
   }, []);
+
+  const initIAP = async () => {
+    try {
+      await RNIap.initConnection();
+      const products = await RNIap.getProducts({ skus: iapSkus });
+      console.log('IAP Products:', products);
+      setIapProducts(products);
+    } catch (err) {
+      console.warn('IAP Init Error:', err);
+    }
+  };
 
   const fetchPackages = async () => {
     try {
@@ -43,6 +78,50 @@ export default function BillingScreen({ navigation }) {
 
   const buyCredits = async (pkg) => {
     setActivePriceId(pkg.price_id);
+
+    // Handle iOS IAP
+    if (Platform.OS === 'ios') {
+      try {
+        await analyticsService.logBeginCheckout(pkg.amount, pkg.name);
+
+        // Find matching IAP product
+        const sku = iapSkus.find(s => s.includes(pkg.credits) || (pkg.type === 'recurring' && s.includes('pro')));
+        if (!sku) {
+          showAlert({ type: 'error', title: 'Error', message: 'Payment option not available for iOS yet.' });
+          return;
+        }
+
+        const purchase = await RNIap.requestPurchase({ sku });
+        console.log('Purchase successful:', purchase);
+
+        // Verify with backend
+        const res = await api.post('/billing/apple-verify', {
+          receipt: purchase.transactionReceipt
+        });
+
+        if (res.data.success) {
+          await analyticsService.logPurchase(pkg.amount, purchase.transactionId);
+          showAlert({
+            type: 'success',
+            title: 'Success',
+            message: pkg.type === 'recurring' ? 'Subscription activated!' : 'Credits purchased successfully!'
+          });
+          await updateCredits();
+          // Finish transaction
+          await RNIap.finishTransaction({ purchase, isConsumable: pkg.type !== 'recurring' });
+        }
+      } catch (err) {
+        console.warn('IAP Purchase Error:', err);
+        if (err.code !== 'E_USER_CANCELLED') {
+          showAlert({ type: 'error', title: 'Payment Error', message: err.message });
+        }
+      } finally {
+        setActivePriceId(null);
+      }
+      return;
+    }
+
+    // Existing Stripe logic (Android/Rest)
     try {
       // 1. Log Start of Checkout
       await analyticsService.logBeginCheckout(pkg.amount, pkg.name);
