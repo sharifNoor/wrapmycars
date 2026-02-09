@@ -1,19 +1,34 @@
-import { getAnalytics, logEvent, logSignUp, logLogin, logPurchase, setUserId, setUserProperty } from '@react-native-firebase/analytics';
+import analytics from '@react-native-firebase/analytics';
 
 class AnalyticsService {
     constructor() {
-        this.analytics = getAnalytics();
+        this.analytics = analytics();
+    }
+
+    /**
+     * Helper to ensure value is a number for Firebase
+     */
+    _parseValue(value) {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+            // Strip currency symbols and commas
+            const cleaned = value.replace(/[^0-9.]/g, '');
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+        return 0;
     }
 
     /**
      * Log a custom event
-     * @param {string} eventName 
-     * @param {Object} params 
      */
     async logEvent(eventName, params = {}) {
         try {
-            await logEvent(this.analytics, eventName, params);
-            console.log(`Analytics Event Logged: ${eventName}`, params);
+            const processedParams = { ...params };
+            if (processedParams.value) processedParams.value = this._parseValue(processedParams.value);
+
+            await this.analytics.logEvent(eventName, processedParams);
+            console.log(`Analytics Event Logged: ${eventName}`, processedParams);
         } catch (error) {
             console.error(`Error logging event ${eventName}:`, error);
         }
@@ -21,11 +36,10 @@ class AnalyticsService {
 
     /**
      * Log User Sign Up
-     * @param {string} method - 'email', 'google', etc.
      */
     async logSignUp(method) {
         try {
-            await logSignUp(this.analytics, { method });
+            await this.analytics.logSignUp({ method });
             console.log(`Analytics Sign Up Logged: ${method}`);
         } catch (error) {
             console.error('Error logging sign up:', error);
@@ -34,11 +48,10 @@ class AnalyticsService {
 
     /**
      * Log User Login
-     * @param {string} method - 'email', 'google', etc.
      */
     async logLogin(method) {
         try {
-            await logLogin(this.analytics, { method });
+            await this.analytics.logLogin({ method });
             console.log(`Analytics Login Logged: ${method}`);
         } catch (error) {
             console.error('Error logging login:', error);
@@ -47,24 +60,22 @@ class AnalyticsService {
 
     /**
      * Log Purchase/Credits Purchase
-     * @param {number} value - Total value of purchase
-     * @param {string} transactionId - Stripe Payment Intent ID or similar
-     * @param {string} currency - e.g. 'USD'
      */
     async logPurchase(value, transactionId, currency = 'USD') {
         try {
-            await logPurchase(this.analytics, {
-                value,
+            const numValue = this._parseValue(value);
+            await this.analytics.logPurchase({
+                value: numValue,
                 currency,
                 transaction_id: transactionId,
                 items: [{
                     item_id: 'credits_pack',
                     item_name: 'Credits Package',
-                    price: value,
+                    price: numValue,
                     quantity: 1
                 }]
             });
-            console.log(`Analytics Purchase Logged: $${value} ${currency} (ID: ${transactionId})`);
+            console.log(`Analytics Purchase Logged: $${numValue} ${currency} (ID: ${transactionId})`);
         } catch (error) {
             console.error('Error logging purchase:', error);
         }
@@ -72,22 +83,21 @@ class AnalyticsService {
 
     /**
      * Log Start of Checkout
-     * @param {number} value 
-     * @param {string} pkgName 
      */
     async logBeginCheckout(value, pkgName) {
         try {
-            await logEvent(this.analytics, 'begin_checkout', {
-                value,
+            const numValue = this._parseValue(value);
+            await this.analytics.logBeginCheckout({
+                value: numValue,
                 currency: 'USD',
                 items: [{
                     item_id: pkgName,
                     item_name: pkgName,
-                    price: value,
+                    price: numValue,
                     quantity: 1
                 }]
             });
-            console.log(`Analytics Begin Checkout Logged: ${pkgName} ($${value})`);
+            console.log(`Analytics Begin Checkout Logged: ${pkgName} ($${numValue})`);
         } catch (error) {
             console.error('Error logging begin checkout:', error);
         }
@@ -95,11 +105,10 @@ class AnalyticsService {
 
     /**
      * Log View Item (Package)
-     * @param {string} itemName 
      */
     async logViewItem(itemName) {
         try {
-            await logEvent(this.analytics, 'view_item', {
+            await this.analytics.logViewItem({
                 items: [{
                     item_id: itemName,
                     item_name: itemName,
@@ -113,11 +122,10 @@ class AnalyticsService {
 
     /**
      * Set User ID
-     * @param {string} id 
      */
     async setUserId(id) {
         try {
-            await setUserId(this.analytics, id);
+            await this.analytics.setUserId(id);
         } catch (error) {
             console.error('Error setting user ID:', error);
         }
@@ -125,12 +133,10 @@ class AnalyticsService {
 
     /**
      * Set User Property
-     * @param {string} name 
-     * @param {string} value 
      */
     async setUserProperty(name, value) {
         try {
-            await setUserProperty(this.analytics, name, value);
+            await this.analytics.setUserProperty(name, value);
         } catch (error) {
             console.error('Error setting user property:', error);
         }

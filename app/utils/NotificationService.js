@@ -1,7 +1,11 @@
-import messaging from '@react-native-firebase/messaging';
+import firebaseMessaging from '@react-native-firebase/messaging';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
 
 class NotificationService {
+    constructor() {
+        this.messaging = firebaseMessaging();
+    }
+
     async requestUserPermission() {
         if (Platform.OS === 'android' && Platform.Version >= 33) {
             const granted = await PermissionsAndroid.request(
@@ -15,14 +19,14 @@ class NotificationService {
                 console.log('Notification permission denied');
             }
         } else {
-            const authStatus = await messaging().requestPermission();
+            const authStatus = await this.messaging.requestPermission();
             const enabled =
-                authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-                authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+                authStatus === firebaseMessaging.AuthorizationStatus.AUTHORIZED ||
+                authStatus === firebaseMessaging.AuthorizationStatus.PROVISIONAL;
 
             if (enabled) {
                 console.log('Authorization status:', authStatus);
-                await messaging().registerDeviceForRemoteMessages();
+                await this.messaging.registerDeviceForRemoteMessages();
                 await this.getToken();
                 await this.subscribeToMarketing();
             }
@@ -31,11 +35,9 @@ class NotificationService {
 
     async getToken() {
         try {
-            const fcmToken = await messaging().getToken();
+            const fcmToken = await this.messaging.getToken();
             if (fcmToken) {
                 console.log('FCM Token:', fcmToken);
-                // Here you would typically send the token to your server
-                // to associate it with the current user.
             }
         } catch (error) {
             console.log('Error getting FCM token:', error);
@@ -44,7 +46,7 @@ class NotificationService {
 
     async subscribeToMarketing() {
         try {
-            await messaging().subscribeToTopic('marketing');
+            await this.messaging.subscribeToTopic('marketing');
             console.log('Subscribed to marketing topic');
         } catch (error) {
             console.log('Error subscribing to marketing topic:', error);
@@ -53,7 +55,7 @@ class NotificationService {
 
     async createNotificationListeners() {
         // Foreground message handler
-        this.foregroundListener = messaging().onMessage(async remoteMessage => {
+        this.foregroundListener = this.messaging.onMessage(async remoteMessage => {
             console.log('A new FCM message arrived!', JSON.stringify(remoteMessage));
 
             const { notification } = remoteMessage;
@@ -67,7 +69,7 @@ class NotificationService {
         });
 
         // Check if app was opened from a quit state via a notification
-        messaging()
+        this.messaging
             .getInitialNotification()
             .then(remoteMessage => {
                 if (remoteMessage) {
@@ -79,7 +81,7 @@ class NotificationService {
             });
 
         // Notification opened app from background state
-        this.onNotificationOpenedAppListener = messaging().onNotificationOpenedApp(remoteMessage => {
+        this.onNotificationOpenedAppListener = this.messaging.onNotificationOpenedApp(remoteMessage => {
             console.log(
                 'Notification caused app to open from background state:',
                 remoteMessage.notification,

@@ -14,6 +14,22 @@ import * as RNIap from 'react-native-iap';
 import { theme } from '../constants/theme';
 import { analyticsService } from '../utils/AnalyticsService';
 
+const IOS_PRODUCT_IDS = [
+  'com.wrapmycars.pro_monthly',
+  'com.wrapmycars.pro_monthly_max',
+  'com.wrapmycars.credits15_v2',
+  'com.wrapmycars.credits50_v2',
+  'com.wrapmycars.credits150_v2'
+];
+
+const IOS_METADATA = {
+  'com.wrapmycars.pro_monthly': { credits: 120, type: 'recurring', price: '$9.99' },
+  'com.wrapmycars.pro_monthly_max': { credits: 400, type: 'recurring', price: '$24.99' },
+  'com.wrapmycars.credits15_v2': { credits: 15, type: 'one_time', price: '$2.99' },
+  'com.wrapmycars.credits50_v2': { credits: 50, type: 'one_time', price: '$7.99' },
+  'com.wrapmycars.credits150_v2': { credits: 150, type: 'one_time', price: '$19.99' },
+};
+
 export default function BillingScreen({ navigation }) {
   const { credits, updateCredits, isSubscribed, currentPlanId } = useContext(AuthContext);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
@@ -24,22 +40,39 @@ export default function BillingScreen({ navigation }) {
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
   const [iapProducts, setIapProducts] = useState([]);
 
+  // Refs for stability and deduplication
+  const packagesRef = React.useRef([]);
+  const processedTransactions = React.useRef(new Set());
+
   /**
    * Guess Apple SKU if not provided by backend metadata
    */
   const guessAppleProductId = (pkg) => {
-    if (pkg.apple_product_id) return pkg.apple_product_id;
+    // Check for explicit SKU first
+    const sku = pkg.appleProductId || pkg.apple_product_id;
+    if (sku) return sku;
 
     const base = 'com.wrapmycars';
     if (pkg.type === 'recurring') {
-      if (pkg.credits > 100) return `${base}.pro_monthly_max`;
+      // 300+ credits is max plan, otherwise standard pro
+      if (pkg.credits >= 300) return `${base}.pro_monthly_max`;
       return `${base}.pro_monthly`;
     }
     return `${base}.credits${pkg.credits}_v2`;
   };
 
   useEffect(() => {
-    fetchPackages();
+    // Android/Generic loads from backend as primary
+    // iOS loads from Apple as primary
+    if (Platform.OS !== 'ios') {
+      fetchPackages();
+    } else {
+      // iOS: Start Apple init immediately
+      initIAP(IOS_PRODUCT_IDS);
+      // Still fetch backend in background for metadata/sync
+      fetchPackages();
+    }
+
     analyticsService.logViewItem('store_screen');
 
     return () => {
@@ -49,6 +82,11 @@ export default function BillingScreen({ navigation }) {
     };
   }, []);
 
+  // Sync packages state to ref
+  useEffect(() => {
+    packagesRef.current = packages;
+  }, [packages]);
+
   useEffect(() => {
     let purchaseUpdateSubscription;
     let purchaseErrorSubscription;
@@ -57,6 +95,17 @@ export default function BillingScreen({ navigation }) {
       purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(async (purchase) => {
         console.log('🔔 [IAP] Purchase Update Listener Triggered');
         console.log('🔔 [IAP] Purchase Object:', JSON.stringify(purchase, null, 2));
+
+        const transactionId = purchase.transactionId;
+
+        // DEDUPLICATION CHECK
+        if (processedTransactions.current.has(transactionId)) {
+          console.log('⚠️ [IAP] Transaction already processed or processing:', transactionId);
+          return;
+        }
+
+        // Mark as processing immediately
+        processedTransactions.current.add(transactionId);
 
         // Extract receipt - newer versions use purchaseToken, older use transactionReceipt
         const receipt = purchase.purchaseToken || purchase.transactionReceipt;
@@ -69,9 +118,9 @@ export default function BillingScreen({ navigation }) {
           let isConsumable = true;
 
           try {
-            // Find package to get details
+            // Find package to get details using REF
             console.log('🔍 [IAP] Finding matching package for productId:', purchase.productId);
-            const pkg = packages.find(p => {
+            const pkg = packagesRef.current.find(p => {
               const pId = p.appleProductId || guessAppleProductId(p);
               return pId === purchase.productId;
             });
@@ -128,10 +177,8 @@ export default function BillingScreen({ navigation }) {
             console.error('❌ [IAP] Verification error occurred');
             console.error('❌ [IAP] Error details:', err);
             console.error('❌ [IAP] Error response:', err?.response?.data);
-            console.error('❌ [IAP] Error status:', err?.response?.status);
-            console.error('❌ [IAP] Error message:', err?.message);
 
-            shouldFinishTransaction = true; // Finish transaction to prevent it from being stuck
+            shouldFinishTransaction = true;
 
             showAlert({
               type: 'error',
@@ -139,7 +186,7 @@ export default function BillingScreen({ navigation }) {
               message: err?.response?.data?.message || err?.message || 'Failed to verify purchase with server.'
             });
           } finally {
-            // Always finish transaction to prevent stuck purchases
+            // Always finish transaction to prevent stuck purchases if we decided to
             if (shouldFinishTransaction) {
               try {
                 console.log('🏁 [IAP] Finishing transaction...', { isConsumable });
@@ -177,7 +224,7 @@ export default function BillingScreen({ navigation }) {
         purchaseErrorSubscription.remove();
       }
     };
-  }, [packages]); // Re-bind when packages load so we can find pkg details
+  }, []); // Run ONCE. Dependencies handled via Refs.
 
   const initIAP = async (skus) => {
     if (!skus || skus.length === 0) return;
@@ -186,40 +233,34 @@ export default function BillingScreen({ navigation }) {
       if (Platform.OS === 'ios') {
         try {
           await RNIap.clearTransactionIOS();
-        } catch (e) {
-          // Ignore if not supported or fails
-        }
+        } catch (e) { }
       }
 
-      // Use fetchProducts with type 'all' to get both products and subscriptions
       const allIapProducts = await RNIap.fetchProducts({ skus, type: 'all' });
-
       console.log('IAP Products fetched from Apple:', allIapProducts);
       setIapProducts(allIapProducts);
 
-      // Merge Apple data into packages if on iOS
       setPackages(prev => {
-        return prev.map(pkg => {
-          const guessedSku = guessAppleProductId(pkg);
-          const appleProd = allIapProducts.find(ap => {
-            const pId = ap.productId || ap.id; // Fallback to id if productId is undefined
-            return (
-              pId === pkg.apple_product_id ||
-              pId === guessedSku ||
-              (pkg.type === 'recurring' && pId?.includes('pro')) ||
-              (pkg.credits && pId?.includes(pkg.credits.toString()))
-            );
-          });
+        // ON iOS, we IGNORE previous state (backend) and build purely from Apple
+        const applePackages = allIapProducts.map(ap => {
+          const sku = ap.productId || ap.id;
+          const meta = IOS_METADATA[sku] || {};
 
-          if (appleProd) {
-            return {
-              ...pkg,
-              name: appleProd.title || pkg.name,
-              amount: appleProd.localizedPrice || pkg.amount,
-              appleProductId: appleProd.productId || appleProd.id
-            };
-          }
-          return pkg;
+          return {
+            id: `ios_${sku}`,
+            appleProductId: sku,
+            name: ap.title || meta.name || sku,
+            amount: ap.localizedPrice || meta.price || '',
+            type: meta.type || (sku.includes('pro') ? 'recurring' : 'one_time'),
+            credits: meta.credits || 0,
+            price_id: `ios_${sku}` // Placeholder for UI keys
+          };
+        });
+
+        // Final sort
+        return applePackages.sort((a, b) => {
+          if (a.type === b.type) return a.credits - b.credits;
+          return a.type === 'recurring' ? -1 : 1;
         });
       });
     } catch (err) {
@@ -229,19 +270,19 @@ export default function BillingScreen({ navigation }) {
 
   const fetchPackages = async () => {
     try {
-      setFetchingPackages(true);
-      const res = await api.get('/billing/packages');
-      console.log('Packages response:', JSON.stringify(res.data));
-      setPackages(res.data);
-
-      if (Platform.OS === 'ios') {
-        // Collect all SKUs (metadata or guessed)
-        const skus = res.data.map(p => guessAppleProductId(p)).filter(id => id);
-
-        if (skus.length > 0) {
-          initIAP(skus);
-        }
+      if (Platform.OS !== 'ios') {
+        setFetchingPackages(true);
       }
+
+      const res = await api.get('/billing/packages');
+      console.log('Packages response fetched for verification sync');
+
+      if (Platform.OS !== 'ios') {
+        // Non-iOS: Source of truth
+        setPackages(res.data);
+      }
+      // iOS: We IGNORE the backend packages for rendering, 
+      // they are only used for background verification if needed.
     } catch (err) {
       console.error('Fetch Packages Error:', err);
       showAlert({ type: 'error', title: 'Error', message: 'Failed to fetch packages' });
@@ -461,7 +502,8 @@ export default function BillingScreen({ navigation }) {
     const isPackActive = pkg.type === 'recurring' && isSubscribed && currentPlanId && (
       pkg.price_id?.toString() === currentPlanId?.toString() ||
       pkg.appleProductId?.toString() === currentPlanId?.toString() ||
-      guessAppleProductId(pkg) === currentPlanId?.toString()
+      (pkg.apple_product_id?.toString() === currentPlanId?.toString()) ||
+      (!pkg.appleProductId && !pkg.apple_product_id && guessAppleProductId(pkg) === currentPlanId?.toString())
     );
 
 
@@ -498,7 +540,7 @@ export default function BillingScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>${pkg.amount}{pkg.type === 'recurring' ? '/mo' : ''}</Text>
+            <Text style={styles.price}>{pkg.amount}{pkg.type === 'recurring' ? '/mo' : ''}</Text>
           </View>
         </View>
 
@@ -574,7 +616,6 @@ export default function BillingScreen({ navigation }) {
               <Text style={styles.proTipText}>Subscribers get <Text style={{ fontWeight: '700', color: '#fff' }}>NO WATERMARKS</Text> and monthly credits. Keep your designs clean!</Text>
             </View>
           </LinearGradient>
-
           {/* Monthly Subscriptions */}
           {subscriptions.length > 0 && (
             <View style={styles.sectionContainer}>
@@ -622,7 +663,9 @@ export default function BillingScreen({ navigation }) {
           <View style={styles.infoSection}>
             <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.textDim} />
             <Text style={styles.infoText}>
-              Secure payment via Stripe. Supports Apple/Google Pay.
+              {Platform.OS === 'ios'
+                ? 'Secure payment via Apple App Store. Manage in Settings.'
+                : 'Secure payment via Stripe. Supports Google Pay.'}
             </Text>
           </View>
 
