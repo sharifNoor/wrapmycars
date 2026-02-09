@@ -1,6 +1,6 @@
 // app/screens/BillingScreen.js
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthContext } from '../contexts/AuthContext';
@@ -9,7 +9,7 @@ import api from '../api/api';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useStripe } from '@stripe/stripe-react-native';
 import * as RNIap from 'react-native-iap';
-import { Platform } from 'react-native';
+
 
 import { theme } from '../constants/theme';
 import { analyticsService } from '../utils/AnalyticsService';
@@ -393,21 +393,47 @@ export default function BillingScreen({ navigation }) {
   };
 
   const handleManageSubscription = () => {
-    showAlert({
-      type: 'confirm',
-      title: 'Manage Subscription',
-      message: 'Would you like to cancel your subscription? You will keep your PRO benefits until the end of your current billing period.',
-      buttons: [
-        {
-          text: 'Keep Subscription',
-          style: 'cancel'
-        },
-        {
-          text: 'Cancel Subscription',
-          onPress: cancelSubscription
-        }
-      ]
-    });
+    // Check if this is an Apple subscription
+    const isAppleSubscription = Platform.OS === 'ios' && currentPlanId?.includes('com.wrapmycars');
+
+    if (isAppleSubscription) {
+      // For Apple subscriptions, show instructions to cancel through iOS Settings
+      showAlert({
+        type: 'confirm',
+        title: 'Manage Subscription',
+        message: 'To manage or cancel your subscription, please go to your iPhone Settings.\n\nSettings > [Your Name] > Subscriptions > Wrap My Cars',
+        buttons: [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Open Settings',
+            onPress: () => {
+              // Deep link to iOS subscription settings
+              Linking.openURL('https://apps.apple.com/account/subscriptions');
+            }
+          }
+        ]
+      });
+    } else {
+      // For Stripe subscriptions, show cancel confirmation
+      showAlert({
+        type: 'confirm',
+        title: 'Manage Subscription',
+        message: 'Would you like to cancel your subscription? You will keep your PRO benefits until the end of your current billing period.',
+        buttons: [
+          {
+            text: 'Keep Subscription',
+            style: 'cancel'
+          },
+          {
+            text: 'Cancel Subscription',
+            onPress: cancelSubscription
+          }
+        ]
+      });
+    }
   };
 
   const cancelSubscription = async () => {
