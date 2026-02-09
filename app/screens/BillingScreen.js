@@ -55,26 +55,49 @@ export default function BillingScreen({ navigation }) {
 
     if (Platform.OS === 'ios') {
       purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(async (purchase) => {
-        console.log('purchaseUpdatedListener', purchase);
+        console.log('🔔 [IAP] Purchase Update Listener Triggered');
+        console.log('🔔 [IAP] Purchase Object:', JSON.stringify(purchase, null, 2));
+
         const receipt = purchase.transactionReceipt;
+        console.log('🔔 [IAP] Receipt exists:', !!receipt);
+        console.log('🔔 [IAP] Receipt length:', receipt?.length);
 
         if (receipt) {
+          let shouldFinishTransaction = false;
+          let isConsumable = true;
+
           try {
             // Find package to get details
-            // We need to match based on product ID (either appleProductId or via guess)
-            // Ideally we iterate packages and check 'appleProductId' or guess
+            console.log('🔍 [IAP] Finding matching package for productId:', purchase.productId);
             const pkg = packages.find(p => {
               const pId = p.appleProductId || guessAppleProductId(p);
-              // Check match with purchase.productId which might be the ID
               return pId === purchase.productId;
             });
 
+            if (pkg) {
+              console.log('✅ [IAP] Package found:', pkg.name, 'Credits:', pkg.credits, 'Type:', pkg.type);
+              isConsumable = pkg.type !== 'recurring';
+            } else {
+              console.warn('⚠️ [IAP] No matching package found for productId:', purchase.productId);
+            }
+
             // Verify with backend
+            console.log('📤 [IAP] Sending verification request to backend...');
+            console.log('📤 [IAP] Endpoint: /billing/apple-verify');
+            console.log('📤 [IAP] Receipt preview:', receipt.substring(0, 100) + '...');
+
             const res = await api.post('/billing/apple-verify', {
-              receipt
+              receipt,
+              productId: purchase.productId,
+              transactionId: purchase.transactionId
             });
 
+            console.log('📥 [IAP] Backend response received:', JSON.stringify(res.data, null, 2));
+
             if (res.data.success) {
+              console.log('✅ [IAP] Backend verification successful!');
+              shouldFinishTransaction = true;
+
               if (pkg) {
                 await analyticsService.logPurchase(pkg.amount, purchase.transactionId);
                 showAlert({
@@ -86,18 +109,47 @@ export default function BillingScreen({ navigation }) {
                 showAlert({ type: 'success', title: 'Success', message: 'Purchase successful!' });
               }
 
+              console.log('🔄 [IAP] Updating credits...');
               await updateCredits();
+              console.log('✅ [IAP] Credits updated successfully');
 
-              // Finish transaction
-              // iOS ignores isConsumable but good practice to pass if cross-platform logic shared
-              // If we don't have pkg, assume consumable (or check purchase.productId string?)
-              const isConsumable = pkg ? pkg.type !== 'recurring' : true;
-              await RNIap.finishTransaction({ purchase, isConsumable });
+            } else {
+              console.error('❌ [IAP] Backend verification failed:', res.data);
+              shouldFinishTransaction = true; // Still finish to prevent stuck transactions
+              showAlert({
+                type: 'error',
+                title: 'Verification Failed',
+                message: res.data.message || 'Purchase could not be verified.'
+              });
             }
           } catch (err) {
-            console.warn('Verification error', err);
-            showAlert({ type: 'error', title: 'Payment Error', message: 'Failed to verify purchase with server.' });
+            console.error('❌ [IAP] Verification error occurred');
+            console.error('❌ [IAP] Error details:', err);
+            console.error('❌ [IAP] Error response:', err?.response?.data);
+            console.error('❌ [IAP] Error status:', err?.response?.status);
+            console.error('❌ [IAP] Error message:', err?.message);
+
+            shouldFinishTransaction = true; // Finish transaction to prevent it from being stuck
+
+            showAlert({
+              type: 'error',
+              title: 'Payment Error',
+              message: err?.response?.data?.message || err?.message || 'Failed to verify purchase with server.'
+            });
+          } finally {
+            // Always finish transaction to prevent stuck purchases
+            if (shouldFinishTransaction) {
+              try {
+                console.log('🏁 [IAP] Finishing transaction...', { isConsumable });
+                await RNIap.finishTransaction({ purchase, isConsumable });
+                console.log('✅ [IAP] Transaction finished successfully');
+              } catch (finishErr) {
+                console.error('❌ [IAP] Error finishing transaction:', finishErr);
+              }
+            }
           }
+        } else {
+          console.warn('⚠️ [IAP] No receipt found in purchase object');
         }
       });
 
@@ -203,9 +255,13 @@ export default function BillingScreen({ navigation }) {
     // Handle iOS IAP
     if (Platform.OS === 'ios') {
       try {
+        console.log('🛒 [IAP] Starting iOS purchase flow');
+        console.log('🛒 [IAP] Package:', pkg.name, 'Credits:', pkg.credits, 'Type:', pkg.type);
+
         await analyticsService.logBeginCheckout(pkg.amount, pkg.name);
 
         // Find matching IAP product from Apple
+        console.log('🔍 [IAP] Searching for Apple product in', iapProducts.length, 'products');
         const appleProduct = iapProducts.find(ap => {
           const pId = ap.productId || ap.id;
           return (
@@ -216,12 +272,19 @@ export default function BillingScreen({ navigation }) {
         });
 
         if (!appleProduct) {
+          console.error('❌ [IAP] No Apple product found for package:', pkg);
+          console.error('❌ [IAP] Available products:', iapProducts.map(p => p.productId || p.id));
           showAlert({ type: 'error', title: 'Error', message: 'This package is not configured in the App Store yet.' });
           return;
         }
 
         const sku = appleProduct.productId || appleProduct.id;
-        console.log(`Requesting Purchase for SKU: ${sku} | Type: ${pkg.type}`);
+        console.log('✅ [IAP] Apple product found:', sku);
+        console.log(`🛒 [IAP] Requesting Purchase for SKU: ${sku} | Type: ${pkg.type}`);
+        console.log('🛒 [IAP] Purchase params:', JSON.stringify({
+          sku,
+          type: pkg.type === 'recurring' ? 'subs' : 'in-app'
+        }, null, 2));
 
         await RNIap.requestPurchase({
           sku,
@@ -232,13 +295,20 @@ export default function BillingScreen({ navigation }) {
           },
           type: pkg.type === 'recurring' ? 'subs' : 'in-app'
         });
+
+        console.log('✅ [IAP] Purchase request sent successfully');
         // Verification is now handled by the listener
       } catch (err) {
-        console.warn('IAP Request Error:', err);
+        console.error('❌ [IAP] Purchase request error:', err);
+        console.error('❌ [IAP] Error code:', err.code);
+        console.error('❌ [IAP] Error message:', err.message);
+
         // We only catch immediate request errors here (like invalid SKU parameter)
         // User cancellation often comes here too in some versions, but also listener
         if (err.code !== 'E_USER_CANCELLED') {
           showAlert({ type: 'error', title: 'Error', message: err.message });
+        } else {
+          console.log('ℹ️ [IAP] User cancelled purchase');
         }
       } finally {
         setActivePriceId(null);
