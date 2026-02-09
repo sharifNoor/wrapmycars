@@ -58,9 +58,11 @@ export default function BillingScreen({ navigation }) {
         console.log('🔔 [IAP] Purchase Update Listener Triggered');
         console.log('🔔 [IAP] Purchase Object:', JSON.stringify(purchase, null, 2));
 
-        const receipt = purchase.transactionReceipt;
+        // Extract receipt - newer versions use purchaseToken, older use transactionReceipt
+        const receipt = purchase.purchaseToken || purchase.transactionReceipt;
         console.log('🔔 [IAP] Receipt exists:', !!receipt);
         console.log('🔔 [IAP] Receipt length:', receipt?.length);
+        console.log('🔔 [IAP] Receipt source:', purchase.purchaseToken ? 'purchaseToken' : 'transactionReceipt');
 
         if (receipt) {
           let shouldFinishTransaction = false;
