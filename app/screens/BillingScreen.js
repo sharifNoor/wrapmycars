@@ -49,14 +49,97 @@ export default function BillingScreen({ navigation }) {
     };
   }, []);
 
+  useEffect(() => {
+    let purchaseUpdateSubscription;
+    let purchaseErrorSubscription;
+
+    if (Platform.OS === 'ios') {
+      purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(async (purchase) => {
+        console.log('purchaseUpdatedListener', purchase);
+        const receipt = purchase.transactionReceipt;
+
+        if (receipt) {
+          try {
+            // Find package to get details
+            // We need to match based on product ID (either appleProductId or via guess)
+            // Ideally we iterate packages and check 'appleProductId' or guess
+            const pkg = packages.find(p => {
+              const pId = p.appleProductId || guessAppleProductId(p);
+              // Check match with purchase.productId which might be the ID
+              return pId === purchase.productId;
+            });
+
+            // Verify with backend
+            const res = await api.post('/billing/apple-verify', {
+              receipt
+            });
+
+            if (res.data.success) {
+              if (pkg) {
+                await analyticsService.logPurchase(pkg.amount, purchase.transactionId);
+                showAlert({
+                  type: 'success',
+                  title: 'Success',
+                  message: pkg.type === 'recurring' ? 'Subscription activated!' : 'Credits purchased successfully!'
+                });
+              } else {
+                showAlert({ type: 'success', title: 'Success', message: 'Purchase successful!' });
+              }
+
+              await updateCredits();
+
+              // Finish transaction
+              // iOS ignores isConsumable but good practice to pass if cross-platform logic shared
+              // If we don't have pkg, assume consumable (or check purchase.productId string?)
+              const isConsumable = pkg ? pkg.type !== 'recurring' : true;
+              await RNIap.finishTransaction({ purchase, isConsumable });
+            }
+          } catch (err) {
+            console.warn('Verification error', err);
+            showAlert({ type: 'error', title: 'Payment Error', message: 'Failed to verify purchase with server.' });
+          }
+        }
+      });
+
+      purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
+        console.warn('purchaseErrorListener', error);
+        if (
+          error.responseCode === '2' ||
+          error.code === 'E_USER_CANCELLED' ||
+          error.code === 'user-cancelled'
+        ) {
+          // User cancelled, silent
+        } else {
+          showAlert({ type: 'error', title: 'Error', message: error.message });
+        }
+      });
+    }
+
+    return () => {
+      if (purchaseUpdateSubscription) {
+        purchaseUpdateSubscription.remove();
+      }
+      if (purchaseErrorSubscription) {
+        purchaseErrorSubscription.remove();
+      }
+    };
+  }, [packages]); // Re-bind when packages load so we can find pkg details
+
   const initIAP = async (skus) => {
     if (!skus || skus.length === 0) return;
     try {
       await RNIap.initConnection();
-      const products = await RNIap.getProducts({ skus });
-      const subs = await RNIap.getSubscriptions({ skus });
+      if (Platform.OS === 'ios') {
+        try {
+          await RNIap.clearTransactionIOS();
+        } catch (e) {
+          // Ignore if not supported or fails
+        }
+      }
 
-      const allIapProducts = [...products, ...subs];
+      // Use fetchProducts with type 'all' to get both products and subscriptions
+      const allIapProducts = await RNIap.fetchProducts({ skus, type: 'all' });
+
       console.log('IAP Products fetched from Apple:', allIapProducts);
       setIapProducts(allIapProducts);
 
@@ -64,19 +147,22 @@ export default function BillingScreen({ navigation }) {
       setPackages(prev => {
         return prev.map(pkg => {
           const guessedSku = guessAppleProductId(pkg);
-          const appleProd = allIapProducts.find(ap =>
-            ap.productId === pkg.apple_product_id ||
-            ap.productId === guessedSku ||
-            (pkg.type === 'recurring' && ap.productId.includes('pro')) ||
-            (pkg.credits && ap.productId.includes(pkg.credits))
-          );
+          const appleProd = allIapProducts.find(ap => {
+            const pId = ap.productId || ap.id; // Fallback to id if productId is undefined
+            return (
+              pId === pkg.apple_product_id ||
+              pId === guessedSku ||
+              (pkg.type === 'recurring' && pId?.includes('pro')) ||
+              (pkg.credits && pId?.includes(pkg.credits.toString()))
+            );
+          });
 
           if (appleProd) {
             return {
               ...pkg,
               name: appleProd.title || pkg.name,
               amount: appleProd.localizedPrice || pkg.amount,
-              appleProductId: appleProd.productId
+              appleProductId: appleProd.productId || appleProd.id
             };
           }
           return pkg;
@@ -120,41 +206,39 @@ export default function BillingScreen({ navigation }) {
         await analyticsService.logBeginCheckout(pkg.amount, pkg.name);
 
         // Find matching IAP product from Apple
-        const appleProduct = iapProducts.find(ap =>
-          ap.productId === pkg.appleProductId ||
-          ap.productId.includes(pkg.credits) ||
-          (pkg.type === 'recurring' && ap.productId.includes('pro'))
-        );
+        const appleProduct = iapProducts.find(ap => {
+          const pId = ap.productId || ap.id;
+          return (
+            pId === pkg.appleProductId ||
+            pId?.includes(pkg.credits) ||
+            (pkg.type === 'recurring' && pId?.includes('pro'))
+          );
+        });
 
         if (!appleProduct) {
           showAlert({ type: 'error', title: 'Error', message: 'This package is not configured in the App Store yet.' });
           return;
         }
 
-        const sku = appleProduct.productId;
-        const purchase = await RNIap.requestPurchase({ sku });
-        console.log('Purchase successful:', purchase);
+        const sku = appleProduct.productId || appleProduct.id;
+        console.log(`Requesting Purchase for SKU: ${sku} | Type: ${pkg.type}`);
 
-        // Verify with backend
-        const res = await api.post('/billing/apple-verify', {
-          receipt: purchase.transactionReceipt
+        await RNIap.requestPurchase({
+          sku,
+          request: {
+            ios: {
+              sku
+            }
+          },
+          type: pkg.type === 'recurring' ? 'subs' : 'in-app'
         });
-
-        if (res.data.success) {
-          await analyticsService.logPurchase(pkg.amount, purchase.transactionId);
-          showAlert({
-            type: 'success',
-            title: 'Success',
-            message: pkg.type === 'recurring' ? 'Subscription activated!' : 'Credits purchased successfully!'
-          });
-          await updateCredits();
-          // Finish transaction
-          await RNIap.finishTransaction({ purchase, isConsumable: pkg.type !== 'recurring' });
-        }
+        // Verification is now handled by the listener
       } catch (err) {
-        console.warn('IAP Purchase Error:', err);
+        console.warn('IAP Request Error:', err);
+        // We only catch immediate request errors here (like invalid SKU parameter)
+        // User cancellation often comes here too in some versions, but also listener
         if (err.code !== 'E_USER_CANCELLED') {
-          showAlert({ type: 'error', title: 'Payment Error', message: err.message });
+          showAlert({ type: 'error', title: 'Error', message: err.message });
         }
       } finally {
         setActivePriceId(null);
@@ -282,9 +366,7 @@ export default function BillingScreen({ navigation }) {
       guessAppleProductId(pkg) === currentPlanId?.toString()
     );
 
-    if (pkg.type === 'recurring') {
-      console.log(`Package: ${pkg.name} | PKG_ID: ${pkg.price_id} | APPLE_ID: ${pkg.appleProductId} | USER_PLAN: ${currentPlanId} | MATCH: ${isPackActive}`);
-    }
+
     return (
       <TouchableOpacity
         key={pkg.price_id || pkg.id}
@@ -308,7 +390,7 @@ export default function BillingScreen({ navigation }) {
         )}
         <View style={styles.packageContent}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.packTitle}>{pkg.credits} {pkg.name}</Text>
+            <Text style={styles.packTitle}>{pkg.name}</Text>
             <Text style={styles.packDesc}>
               {pkg.type === 'recurring' ? (
                 `Monthly credits + Remove Watermark`
